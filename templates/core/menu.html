@@ -1,0 +1,35 @@
+{% extends 'core/base.html' %}
+{% load humanize %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Thực Đơn Nhà Hàng</h2>
+    <a href="{% url 'table_list' %}" class="btn btn-primary">Về Sơ Đồ Bàn</a>
+</div>
+
+<div class="row">
+    {% for mon in mon_an %}
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-transparent text-center">
+                {% if 'F' in mon.itemid %} 🍜 {% elif 'D' in mon.itemid %} 🥤 {% else %} 🍰 {% endif %}
+            </div>
+            <div class="card-body text-center">
+                <h5 class="card-title text-primary">{{ mon.name }}</h5>
+                <p class="card-text fs-5 fw-bold text-danger">
+                    {{ mon.price|intcomma }} VNĐ
+                </p>
+                
+                {% if mon.status == 'Available' %}
+                    <span class="badge bg-success">Đang phục vụ</span>
+                {% else %}
+                    <span class="badge bg-secondary">Hết món</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center">
+        <p>Hiện chưa có món ăn nào trong thực đơn.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
