@@ -78,7 +78,9 @@ Dự án sử dụng `python-dotenv` để bảo mật. Bạn cần tạo file `
 
 ### Bước 5: Nạp dữ liệu Database (Quan trọng)
 
-Vì hệ thống chạy trên CSDL có sẵn, hãy đảm bảo bạn đã chạy 2 script SQL này trong MySQL Workbench hoặc CLI:
+**Chú ý**: Folder mysql_code chỉ là nơi lưu trữ code MySql cho team coi
+
+Vì hệ thống chạy trên CSDL có sẵn, hãy đảm bảo bạn đã chạy 2 script SQL này **trong MySQL Workbench** hoặc CLI:
 
 1.  `table_and_data.sql`: Tạo bảng và dữ liệu mẫu.
 2.  `store_and_funcs.sql`: Nạp các Stored Procedures và Functions.
