@@ -16,7 +16,7 @@ Khi phát triển tiếp, team cần **`kiểm tra core/models.py** và thống 
 3.  Dùng SQL VIEW (**nhược điểm**: Chỉ để XEM (Read-only), tức là gần như không thể Thêm/Sửa/Xóa dữ liệu thông qua View này (vì nó là bảng ảo). Muốn sửa phải viết SQL riêng hoặc thao tác trên bảng gốc.
 * Làm Triggers xong, tự thao tác lại việc thêm db vào django (hỏi AI nhờ nó chỉ cho), tự setup các kiểu
 * Muốn code thêm giao diện bằng React cho đẹp thì code lại backend thành các API để trả về, nhớ cấu hình lại settings.py trước để nó nhận host gốc của React, còn lại nếu biết thì làm, tùy. Còn không muốn? thì có thể vẫn code theo kiểu như template (server-side rendering), giao diện muốn đẹp bao nhiêu thì tùy (hiện đang dùng boostrap cho css, có thể đổi sang tailwind nhưng nhớ tự cấu hình, commit code, note trong README)
-* Không thay đổi .gitignore, nhớ python -m venv venv để chạy môi trường ảo cho django, muốn thêm thư viện gì cũng phải ghi vào trong requirement.txt
+* Có muốn thay đổi .gitignore thì ghi thêm bên dưới, không sửa bên trên; nhớ python -m venv venv để chạy môi trường ảo cho django; muốn thêm thư viện gì cũng phải ghi vào trong requirement.txt
 * Làm xong push lên github, nếu phức tạp mà không muốn loạn code trong main thì tạo nhánh (branch, ví dụ feature/...) cho mình rồi push lên nhánh đó cho mọi người kiểm tra
 * Viết báo cáo (như thầy dặn ha)
 
