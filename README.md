@@ -1,4 +1,4 @@
-# 🍽️ Restaurant Management System (Backend)
+# 🍽️ Restaurant Management System
 
 Dự án quản lý nhà hàng, sử dụng **Django** kết nối với cơ sở dữ liệu **MySQL**.
 Hệ thống hiện tại hỗ trợ cả Django Templates (Demo) và đang trong quá trình chuyển đổi sang **RESTful API** để phục vụ Frontend **ReactJS**.
