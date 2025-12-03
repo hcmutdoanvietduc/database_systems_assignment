@@ -1,5 +1,5 @@
 DROP DATABASE IF EXISTS RestaurantDatabase;
-CREATE DATABASE IF NOT EXISTS RestaurantDatabase;
+CREATE DATABASE IF NOT EXISTS RestaurantDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE RestaurantDatabase;
 CREATE TABLE Admin (
     AdminID      VARCHAR(10) PRIMARY KEY,
@@ -233,18 +233,19 @@ INSERT INTO RTable (TableID, TableNumber, Area, Status) VALUES
 -- 4. MENU (ITEMS) & MATERIALS
 -- =============================================
 INSERT INTO Item (ItemID, Name, Price, Status, SuperItemID) VALUES
-('CAT1', 'Món Chính', 0, 'Available', NULL),
-('CAT2', 'Đồ Uống', 0, 'Available', NULL),
-('CAT3', 'Tráng Miệng', 0, 'Available', NULL);
+('CAT1', 'Bún Phở Mì', 0, 'Available', NULL),
+('CAT2', 'Cơm', 0, 'Available', NULL),
+('CAT3', 'Tráng Miệng', 0, 'Available', NULL),
+('CAT4', 'Đồ Uống', 0, 'Available', NULL);
 
 INSERT INTO Item (ItemID, Name, Price, Status, SuperItemID) VALUES
 ('F001', 'Phở Bò Wagyu', 150000, 'Available', 'CAT1'),
-('F002', 'Cơm Tấm Sườn', 65000, 'Available', 'CAT1'),
+('F002', 'Cơm Tấm Sườn', 65000, 'Available', 'CAT2'),
 ('F003', 'Bún Chả Obama', 70000, 'Available', 'CAT1'),
 ('F004', 'Mì Ý Sốt Kem', 120000, 'Unavailable', 'CAT1'),
-('D001', 'Cafe Sữa Đá', 35000, 'Available', 'CAT2'),
-('D002', 'Trà Đào Cam Sả', 45000, 'Available', 'CAT2'),
-('D003', 'Sinh Tố Bơ', 50000, 'Available', 'CAT2'),
+('D001', 'Cafe Sữa Đá', 35000, 'Available', 'CAT4'),
+('D002', 'Trà Đào Cam Sả', 45000, 'Available', 'CAT4'),
+('D003', 'Sinh Tố Bơ', 50000, 'Available', 'CAT4'),
 ('D004', 'Bánh Flan', 20000, 'Available', 'CAT3');
 
 INSERT INTO Material (MaterialID, Quantity) VALUES

@@ -19,5 +19,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('core.urls')), # <--- Dòng này để nối với file bên core/urls.py
+    path('', include('backend.core.urls')),
 ]

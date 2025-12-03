@@ -1,3 +1,5 @@
+USE RestaurantDatabase;
+
 DROP FUNCTION IF EXISTS fn_OrderSubtotal;
 DELIMITER $$
 
