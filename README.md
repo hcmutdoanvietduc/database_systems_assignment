@@ -65,8 +65,12 @@ pip install -r requirements.txt
 
 Dự án sử dụng `python-dotenv` để bảo mật. Bạn cần tạo file `.env` tại thư mục gốc và điền thông tin MySQL của bạn:
 
-1.  Copy file `.env.example` thành `.env`
-2.  Điền thông tin cấu hình:
+1.  Chạy lệnh này để lấy thông tin của SECRET_KEY trên máy bạn
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+2.  Copy file `.env.example` thành `.env`
+3.  Điền thông tin cấu hình:
     ```ini
     # Cấu hình Database
     DB_NAME=RestaurantDatabase
