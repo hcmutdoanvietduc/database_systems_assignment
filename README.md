@@ -35,7 +35,7 @@ Khi phát triển tiếp, team cần **`kiểm tra core/models.py** và thống 
 ### Bước 1: Clone dự án
 ```bash
 git clone <link-repo-cua-ban>
-cd restaurantApp
+cd database_systems_assignment
 ````
 
 ### Bước 2: Thiết lập môi trường ảo
