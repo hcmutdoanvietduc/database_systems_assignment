@@ -91,7 +91,7 @@ Vì hệ thống chạy trên CSDL có sẵn, hãy đảm bảo bạn đã chạ
 
 ### Bước 6: Chạy Server
 
-Tạo các bảng hệ thống quản lí CSDL (trong admin)
+* Tạo các bảng hệ thống quản lí CSDL (trong admin)
 ```bash
 python manage.py migrate
 ```
