@@ -17,86 +17,86 @@ from .utils import generate_id
 # ============================================================
 # TEMPLATE VIEWS (Django Templates - giữ lại cho demo)
 # ============================================================
-def home(request):
-    return render(request, 'core/home.html')
+# def home(request):
+#     return render(request, 'core/home.html')
 
-def menu_list(request):
-    items = Item.objects.filter(status='Available', superitemid__isnull=False)
-    return render(request, 'core/menu.html', {'mon_an': items})
+# def menu_list(request):
+#     items = Item.objects.filter(status='Available', superitemid__isnull=False)
+#     return render(request, 'core/menu.html', {'mon_an': items})
 
-def table_list(request):
-    tables = Rtable.objects.all().order_by('tablenumber')
-    return render(request, 'core/table_list.html', {'tables': tables})
+# def table_list(request):
+#     tables = Rtable.objects.all().order_by('tablenumber')
+#     return render(request, 'core/table_list.html', {'tables': tables})
 
-def table_detail(request, table_id):
-    table = get_object_or_404(Rtable, tableid=table_id)
-    current_order = Rorder.objects.filter(otableid=table, status='Serving').first()
+# def table_detail(request, table_id):
+#     table = get_object_or_404(Rtable, tableid=table_id)
+#     current_order = Rorder.objects.filter(otableid=table, status='Serving').first()
     
-    order_details = []
-    total_price = 0
+#     order_details = []
+#     total_price = 0
     
-    if current_order:
-        details = Detail.objects.filter(dorderid=current_order)
-        for d in details:
-            item = d.ditemid 
-            price = item.price 
-            subtotal = d.quantity * price
-            total_price += subtotal
+#     if current_order:
+#         details = Detail.objects.filter(dorderid=current_order)
+#         for d in details:
+#             item = d.ditemid 
+#             price = item.price 
+#             subtotal = d.quantity * price
+#             total_price += subtotal
             
-            order_details.append({
-                'item_name': item.name,
-                'quantity': d.quantity,
-                'price': price,
-                'subtotal': subtotal
-            })
+#             order_details.append({
+#                 'item_name': item.name,
+#                 'quantity': d.quantity,
+#                 'price': price,
+#                 'subtotal': subtotal
+#             })
             
-    menu_items = Item.objects.filter(status='Available', superitemid__isnull=False)
+#     menu_items = Item.objects.filter(status='Available', superitemid__isnull=False)
     
-    context = {
-        'table': table,
-        'order': current_order,
-        'order_details': order_details,
-        'total_price': total_price,
-        'menu_items': menu_items,
-    }
-    return render(request, 'core/table_detail.html', context)
+#     context = {
+#         'table': table,
+#         'order': current_order,
+#         'order_details': order_details,
+#         'total_price': total_price,
+#         'menu_items': menu_items,
+#     }
+#     return render(request, 'core/table_detail.html', context)
 
-def add_item(request, table_id, item_id):
-    table = get_object_or_404(Rtable, tableid=table_id)
-    item = get_object_or_404(Item, itemid=item_id)
+# def add_item(request, table_id, item_id):
+#     table = get_object_or_404(Rtable, tableid=table_id)
+#     item = get_object_or_404(Item, itemid=item_id)
     
-    order = Rorder.objects.filter(otableid=table, status='Serving').first()
+#     order = Rorder.objects.filter(otableid=table, status='Serving').first()
     
-    if not order:
-        table.status = 'Occupied'
-        table.save()
+#     if not order:
+#         table.status = 'Occupied'
+#         table.save()
         
-        order = Rorder.objects.create(
-            orderid=generate_id('ORD'),
-            createdat=timezone.now(),
-            status='Serving',
-            quantity=0,
-            otableid=table
-        )
+#         order = Rorder.objects.create(
+#             orderid=generate_id('ORD'),
+#             createdat=timezone.now(),
+#             status='Serving',
+#             quantity=0,
+#             otableid=table
+#         )
     
-    default_chef = Chef.objects.first() 
-    existing_detail = Detail.objects.filter(dorderid=order, ditemid=item).first()
+#     default_chef = Chef.objects.first() 
+#     existing_detail = Detail.objects.filter(dorderid=order, ditemid=item).first()
     
-    if existing_detail:
-        existing_detail.quantity += 1
-        existing_detail.save()
-    else:
-        Detail.objects.create(
-            dorderid=order,
-            ditemid=item,
-            dstaffid=default_chef, 
-            quantity=1
-        )
+#     if existing_detail:
+#         existing_detail.quantity += 1
+#         existing_detail.save()
+#     else:
+#         Detail.objects.create(
+#             dorderid=order,
+#             ditemid=item,
+#             dstaffid=default_chef, 
+#             quantity=1
+#         )
     
-    order.quantity = (order.quantity or 0) + 1
-    order.save()
+#     order.quantity = (order.quantity or 0) + 1
+#     order.save()
     
-    return redirect('table_detail', table_id=table.tableid)
+#     return redirect('table_detail', table_id=table.tableid)
 
 
 # ============================================================

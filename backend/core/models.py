@@ -9,7 +9,7 @@ class Admin(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'admin'
+        db_table = 'Admin'
 
 
 class Cashier(models.Model):
@@ -18,7 +18,7 @@ class Cashier(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'cashier'
+        db_table = 'Cashier'
 
 
 class Chef(models.Model):
@@ -27,7 +27,7 @@ class Chef(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'chef'
+        db_table = 'Chef'
 
 
 class Customer(models.Model):
@@ -37,7 +37,7 @@ class Customer(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'customer'
+        db_table = 'Customer'
 
 
 class Customerbill(models.Model):
@@ -47,7 +47,7 @@ class Customerbill(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'customerbill'
+        db_table = 'CustomerBill'
 
 
 class Detail(models.Model):
@@ -60,7 +60,7 @@ class Detail(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'detail'
+        db_table = 'Detail'
 
 
 class Invoice(models.Model):
@@ -72,7 +72,7 @@ class Invoice(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'invoice'
+        db_table = 'Invoice'
 
 
 class Item(models.Model):
@@ -84,7 +84,7 @@ class Item(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'item'
+        db_table = 'Item'
 
 
 class Manager(models.Model):
@@ -97,7 +97,7 @@ class Manager(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'manager'
+        db_table = 'Manager'
 
 
 class Material(models.Model):
@@ -106,7 +106,7 @@ class Material(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'material'
+        db_table = 'Material'
 
 
 class Payment(models.Model):
@@ -120,7 +120,7 @@ class Payment(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'payment'
+        db_table = 'Payment'
 
 
 class Promotion(models.Model):
@@ -132,7 +132,7 @@ class Promotion(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'promotion'
+        db_table = 'Promotion'
 
 
 class Ptorder(models.Model):
@@ -142,7 +142,7 @@ class Ptorder(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'ptorder'
+        db_table = 'PTOrder'
 
 
 class Qdmaterial(models.Model):
@@ -153,7 +153,7 @@ class Qdmaterial(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'qdmaterial'
+        db_table = 'QDMaterial'
 
 
 class Rorder(models.Model):
@@ -165,7 +165,7 @@ class Rorder(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'rorder'
+        db_table = 'ROrder'
 
 
 class Rtable(models.Model):
@@ -176,7 +176,7 @@ class Rtable(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'rtable'
+        db_table = 'RTable'
 
 
 class Staff(models.Model):
@@ -188,7 +188,7 @@ class Staff(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'staff'
+        db_table = 'Staff'
 
 
 class Supervision(models.Model):
@@ -198,7 +198,7 @@ class Supervision(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'supervision'
+        db_table = 'Supervision'
 
 
 class Waiter(models.Model):
@@ -207,7 +207,7 @@ class Waiter(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'waiter'
+        db_table = 'Waiter'
 
 
 class Ypromo(models.Model):
@@ -218,4 +218,4 @@ class Ypromo(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'ypromo'
+        db_table = 'YPromo'
