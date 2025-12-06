@@ -96,7 +96,10 @@ npm start
   * Server chạy tại: `http://localhost:3000`
 
 ### 7. Sử dụng
+Truy cập giao diện tại `http://localhost:3000`
+
 Đối với mật khẩu, hiện đang dùng chung là 123456
+
 Đối với tên tài khoản
  * Của Quản lí: sManager (tài khoản/mật khẩu : sManager/123456)
  * Của Nhân viên: mã số nhân viên (StaffID), có thể xem trong table_and_data.sql (ví dụ: tài khoản/mật khẩu hiện có thể xài chẳng hạn là ST01/123456)
