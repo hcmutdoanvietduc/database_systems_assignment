@@ -1,4 +1,27 @@
 from django.db import models
+from django.contrib.auth.models import User
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=20, choices=[('Manager', 'Manager'), ('Staff', 'Staff')], default='Staff')
+    
+    # Links to legacy tables
+    admin_profile = models.OneToOneField('Admin', on_delete=models.SET_NULL, null=True, blank=True, db_column='AdminID')
+    manager_profile = models.OneToOneField('Manager', on_delete=models.SET_NULL, null=True, blank=True, db_column='ManagerID')
+    staff_profile = models.OneToOneField('Staff', on_delete=models.SET_NULL, null=True, blank=True, db_column='StaffID')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
+
+    @property
+    def full_name(self):
+        if self.admin_profile:
+            return self.admin_profile.fullname
+        if self.manager_profile:
+            return self.manager_profile.fullname
+        if self.staff_profile:
+            return self.staff_profile.fullname
+        return self.user.username
 
 class Admin(models.Model):
     adminid = models.CharField(db_column='AdminID', primary_key=True, max_length=10)
@@ -102,6 +125,7 @@ class Manager(models.Model):
 
 class Material(models.Model):
     materialid = models.CharField(db_column='MaterialID', primary_key=True, max_length=10)
+    name = models.CharField(max_length=100)
     quantity = models.IntegerField(db_column='Quantity', blank=True, null=True)
 
     class Meta:

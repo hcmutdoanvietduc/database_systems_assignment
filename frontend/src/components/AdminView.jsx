@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getTables, getOrders, getInvoices } from '../api';
+import { getTables, getOrders, getInvoices, getRevenueStats } from '../api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './AdminView.css';
 
 function AdminView() {
   const [tables, setTables] = useState([]);
   const [orders, setOrders] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentOrderPage, setCurrentOrderPage] = useState(1);
@@ -15,18 +17,19 @@ function AdminView() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 10000); // Auto-refresh mỗi 10 giây
+    const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
   }, []);
 
   const loadData = async () => {
     try {
-      const [tablesRes, ordersRes, invoicesRes] = await Promise.all([
+      const [tablesRes, ordersRes, invoicesRes, revenueRes] = await Promise.all([
         getTables(),
         getOrders(),
         getInvoices(),
+        getRevenueStats()
       ]);
-      // Handle pagination wrapper
+      
       const tablesData = tablesRes.data.results || tablesRes.data;
       const ordersData = ordersRes.data.results || ordersRes.data;
       const invoicesData = invoicesRes.data.results || invoicesRes.data;
@@ -34,6 +37,7 @@ function AdminView() {
       setTables(Array.isArray(tablesData) ? tablesData : []);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
       setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
+      setRevenueData(revenueRes.data || []);
       setError(null);
     } catch (err) {
       setError('Không thể tải dữ liệu!');
@@ -45,13 +49,12 @@ function AdminView() {
 
   if (loading) return <div className="loading">⏳ Đang tải dữ liệu...</div>;
 
-  // Tính toán thống kê
+  // ... calculations ...
   const occupiedCount = tables.filter((t) => t.status === 'Occupied').length;
   const availableCount = tables.filter((t) => t.status === 'Available').length;
   const servingCount = orders.filter((o) => o.status === 'Serving').length;
   const paidCount = orders.filter((o) => o.status === 'Paid').length;
   
-  // Tính tổng doanh thu từ tất cả orders đã thanh toán
   const totalRevenue = orders
     .filter(order => order.status === 'Paid')
     .reduce((sum, order) => {
@@ -61,17 +64,14 @@ function AdminView() {
       return sum + orderTotal;
     }, 0);
 
-  // Sắp xếp đơn hàng và hóa đơn mới nhất lên đầu
   const sortedOrders = [...orders].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
   const sortedInvoices = [...invoices].sort((a, b) => new Date(b.datecreated) - new Date(a.datecreated));
 
-  // Pagination cho orders
   const indexOfLastOrder = currentOrderPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalOrderPages = Math.ceil(sortedOrders.length / ordersPerPage);
 
-  // Pagination cho invoices
   const indexOfLastInvoice = currentInvoicePage * invoicesPerPage;
   const indexOfFirstInvoice = indexOfLastInvoice - invoicesPerPage;
   const currentInvoices = sortedInvoices.slice(indexOfFirstInvoice, indexOfLastInvoice);
@@ -79,7 +79,7 @@ function AdminView() {
 
   return (
     <div className="admin-view">
-      <h1 style={{ marginTop: 0, marginBottom: '2rem' }}>👨‍💼 Quản Lý Nhà Hàng</h1>
+      <h1 style={{ marginTop: 0, marginBottom: '1rem' }}>👨‍💼 Quản Lý Nhà Hàng</h1>
       
       {error && <div className="error">❌ {error}</div>}
 
@@ -96,11 +96,6 @@ function AdminView() {
           <div className="kpi-value">{availableCount}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-icon">📋</div>
-          <div className="kpi-label">Đơn Đang Phục Vụ</div>
-          <div className="kpi-value">{servingCount}</div>
-        </div>
-        <div className="kpi-card">
           <div className="kpi-icon">✅</div>
           <div className="kpi-label">Đơn Đã Thanh Toán</div>
           <div className="kpi-value">{paidCount}</div>
@@ -109,6 +104,23 @@ function AdminView() {
           <div className="kpi-icon">💰</div>
           <div className="kpi-label">Tổng Doanh Thu</div>
           <div className="kpi-value">₫ {Math.round(totalRevenue).toLocaleString('vi-VN')}</div>
+        </div>
+      </div>
+
+      {/* Revenue Chart */}
+      <div className="view-section" style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+        <h2 className="section-title">📈 Biểu Đồ Doanh Thu (7 Ngày)</h2>
+        <div style={{ height: 300 }}>
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)} />
+                    <Legend />
+                    <Bar dataKey="revenue" fill="#8884d8" name="Doanh Thu" />
+                </BarChart>
+            </ResponsiveContainer>
         </div>
       </div>
 
@@ -299,48 +311,6 @@ function AdminView() {
               </div>
             )}
           </>
-        )}
-      </div>
-
-      {/* Table Distribution - moved to end */}
-      <div className="view-section">
-        <h2 className="section-title">🗺️ Phân Bố Bàn Theo Khu Vực</h2>
-        {tables.length === 0 ? (
-          <p className="no-data">Chưa có bàn nào</p>
-        ) : (
-          <div className="area-distribution">
-            {[...new Set(tables.map((t) => t.area))].map((area) => {
-              const areaTables = tables.filter((t) => t.area === area);
-              const areaOccupied = areaTables.filter((t) => t.status === 'Occupied').length;
-              return (
-                <div key={area} className="area-card">
-                  <h3>{area}</h3>
-                  <div className="area-stats">
-                    <div className="area-stat">
-                      <span className="label">Tổng:</span>
-                      <span className="value">{areaTables.length}</span>
-                    </div>
-                    <div className="area-stat">
-                      <span className="label">Đang phục vụ:</span>
-                      <span className="value occupied">{areaOccupied}</span>
-                    </div>
-                    <div className="area-stat">
-                      <span className="label">Trống:</span>
-                      <span className="value available">{areaTables.length - areaOccupied}</span>
-                    </div>
-                  </div>
-                  <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${(areaOccupied / areaTables.length) * 100}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         )}
       </div>
     </div>

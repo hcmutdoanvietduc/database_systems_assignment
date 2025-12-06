@@ -9,6 +9,31 @@ const api = axios.create({
   },
 });
 
+// Add Request Interceptor to attach Token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ==================== AUTH ====================
+export const login = (username, password) => {
+  return api.post('/login/', { username, password });
+};
+
+export const logout = () => {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('username');
+  window.location.href = '/'; // Force reload to clear state
+};
+
 // ==================== ITEMS ====================
 export const getItems = () => {
   return api.get('/items/');
@@ -32,7 +57,7 @@ export const getTableDetail = (tableId) => {
 };
 
 export const updateTable = (tableId, data) => {
-  return api.put(`/tables/${tableId}/`, data);
+  return api.patch(`/tables/${tableId}/`, data);
 };
 
 // ==================== ORDERS ====================
@@ -93,3 +118,24 @@ export const getChefs = () => {
 };
 
 export default api;
+// ==================== MATERIALS ====================
+export const getMaterials = () => {
+  return api.get('/materials/');
+};
+
+export const createMaterial = (data) => {
+  return api.post('/materials/', data);
+};
+
+export const updateMaterial = (id, data) => {
+  return api.put(`/materials/${id}/`, data);
+};
+
+export const deleteMaterial = (id) => {
+  return api.delete(`/materials/${id}/`);
+};
+
+// ==================== REVENUE ====================
+export const getRevenueStats = () => {
+  return api.get('/revenue/');
+};

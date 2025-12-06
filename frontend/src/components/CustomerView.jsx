@@ -43,21 +43,14 @@ function CustomerView() {
       setSelectedTable(table);
       setCurrentOrder(table.current_order);
     } else {
-      try {
-        const orderRes = await createOrder(table.tableid);
-        setSelectedTable(table);
-        setCurrentOrder(orderRes.data);
-        setSuccess(`Đã tạo đơn cho bàn ${table.tablenumber}!`);
-        setTimeout(() => setSuccess(null), 2000);
-        await loadData();
-      } catch (err) {
-        setError('Lỗi khi tạo đơn hàng!');
-      }
+      // Chỉ chọn bàn local, chưa tạo đơn ngay
+      setSelectedTable(table);
+      setCurrentOrder(null);
     }
   };
 
   const handleAddItem = (itemId) => {
-    if (!currentOrder) {
+    if (!selectedTable) {
       setError('Vui lòng chọn bàn trước!');
       return;
     }
@@ -70,7 +63,17 @@ function CustomerView() {
     if (!confirmModal.item) return;
 
     try {
-      const res = await addItemToOrder(currentOrder.orderid, confirmModal.item.itemid, confirmModal.quantity);
+      let orderId;
+      
+      // Nếu chưa có đơn hàng, tạo mới
+      if (!currentOrder) {
+        const orderRes = await createOrder(selectedTable.tableid);
+        orderId = orderRes.data.orderid;
+      } else {
+        orderId = currentOrder.orderid;
+      }
+
+      const res = await addItemToOrder(orderId, confirmModal.item.itemid, confirmModal.quantity);
       setCurrentOrder(res.data);
       setSuccess(`Đã thêm ${confirmModal.quantity} ${confirmModal.item.name}!`);
       setTimeout(() => setSuccess(null), 1500);
@@ -91,6 +94,17 @@ function CustomerView() {
       ...prev,
       quantity: Math.max(1, Math.min(99, prev.quantity + delta))
     }));
+  };
+
+  const handleReselectTable = () => {
+    if (currentOrder && currentOrder.details && currentOrder.details.length > 0) {
+      alert('Bạn đã gọi món, không thể đổi bàn lúc này. Vui lòng liên hệ nhân viên!');
+      return;
+    }
+    if (window.confirm('Bạn có chắc muốn chọn lại bàn khác?')) {
+      setSelectedTable(null);
+      setCurrentOrder(null);
+    }
   };
 
   if (loading) return <div className="loading">⏳ Đang tải...</div>;
@@ -146,7 +160,7 @@ function CustomerView() {
       )}
 
       {/* Thông tin đơn hàng hiện tại */}
-      {selectedTable && currentOrder && (
+      {selectedTable && (
         <div className="current-order-card">
           <div className="order-header-info">
             <div className="info-item">
@@ -157,14 +171,35 @@ function CustomerView() {
               <span className="label">Khu vực:</span>
               <span className="value">{selectedTable.area}</span>
             </div>
-            <div className="info-item">
-              <span className="label">Order ID:</span>
-              <span className="value">{currentOrder.orderid}</span>
-            </div>
+            {currentOrder && (
+              <div className="info-item">
+                <span className="label">Order ID:</span>
+                <span className="value">{currentOrder.orderid}</span>
+              </div>
+            )}
+            <button 
+              className="btn-reselect" 
+              onClick={handleReselectTable}
+              style={{ 
+                marginLeft: 'auto', 
+                padding: '0.5rem 1rem', 
+                backgroundColor: '#95a5a6', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '8px', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontWeight: 'bold'
+              }}
+            >
+              🔄 Chọn lại bàn
+            </button>
           </div>
 
           {/* Danh sách món đã gọi */}
-          {currentOrder.details && currentOrder.details.length > 0 ? (
+          {currentOrder && currentOrder.details && currentOrder.details.length > 0 ? (
             <div className="ordered-items">
               <h3>Các món đã gọi:</h3>
               <table className="items-table">

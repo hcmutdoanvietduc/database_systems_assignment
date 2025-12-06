@@ -69,6 +69,7 @@ CREATE TABLE Item (
 );
 CREATE TABLE Material (
     MaterialID   VARCHAR(10) PRIMARY KEY,
+    Name         VARCHAR(100) NOT NULL,
     Quantity     INT CHECK (Quantity >= 0)
 );
 CREATE TABLE Promotion (
@@ -152,9 +153,7 @@ ADD CONSTRAINT FK_Invoice_Customer
 ALTER TABLE Promotion 
 ADD DiscountPercent DECIMAL(5,2) DEFAULT 0;
 
--- =============================================
 -- 1. ADMIN & MANAGER
--- =============================================
 INSERT INTO Admin (AdminID, FullName, Phone, Email, Permission) VALUES
 ('AD01', 'Nguyễn Văn An', '0909001001', 'an.admin@sys.com', 'SuperAdmin'),
 ('AD02', 'Trần Thị Bình', '0909001002', 'binh.admin@sys.com', 'SystemMonitor'),
@@ -168,9 +167,8 @@ INSERT INTO Manager (ManagerID, FullName, Phone, Email, MAdminID, Permission) VA
 ('MGR04', 'Bùi Thị Lan', '0912002004', 'lan.mgr@rest.com', 'AD02', 'ShiftManager_Evening'),
 ('MGR05', 'Vũ Văn Khôi', '0912002005', 'khoi.mgr@rest.com', 'AD03', 'KitchenManager');
 
--- =============================================
 -- 2. STAFF SYSTEM (Staff, Chef, Cashier, Waiter, Supervision)
--- =============================================
+
 INSERT INTO Staff (StaffID, FullName, Phone, Status, SManagerID) VALUES
 -- Chefs
 ('ST01', 'Gordon Ramsay Fake', '0988003001', 'Working', 'MGR05'),
@@ -202,14 +200,12 @@ INSERT INTO Waiter (StaffID, Fluency) VALUES
 
 INSERT INTO Supervision (minor_StaffID, major_StaffID) VALUES
 ('ST03', 'ST01'), -- Phụ bếp Tí bị Chef Gordon giám sát
-('ST04', 'ST02'), -- Phụ bếp Tèo bị Chef Yan giám sát
-('ST10', 'ST09'), -- ST10 bị ST09 giám sát
+('ST04', 'ST02'), 
+('ST10', 'ST09'), 
 ('ST13', 'ST09'),
 ('ST12', 'ST11');
 
--- =============================================
 -- 3. CUSTOMER & TABLE
--- =============================================
 INSERT INTO Customer (CustomerID, FullName, Phone) VALUES
 ('C001', 'Nguyễn Văn Khách', '0901001001'),
 ('C002', 'Trần Thị Mua', '0901001002'),
@@ -220,18 +216,16 @@ INSERT INTO Customer (CustomerID, FullName, Phone) VALUES
 ('C007', 'Đặng Văn Lạ', '0901001007');
 
 INSERT INTO RTable (TableID, TableNumber, Area, Status) VALUES
-(101, 101, 'Tầng 1 - Sảnh', 'Occupied'),
+(101, 101, 'Tầng 1 - Sảnh', 'Available'),
 (102, 102, 'Tầng 1 - Sảnh', 'Available'),
-(103, 103, 'Tầng 1 - Góc', 'Reserved'),
-(104, 104, 'Tầng 1 - Góc', 'Occupied'),
-(201, 201, 'Tầng 2 - VIP', 'Occupied'),
+(103, 103, 'Tầng 1 - Góc', 'Available'),
+(104, 104, 'Tầng 1 - Góc', 'Available'),
+(201, 201, 'Tầng 2 - VIP', 'Available'),
 (202, 202, 'Tầng 2 - VIP', 'Available'),
 (301, 301, 'Sân thượng', 'Available'),
 (302, 302, 'Sân thượng', 'Available');
 
--- =============================================
 -- 4. MENU (ITEMS) & MATERIALS
--- =============================================
 INSERT INTO Item (ItemID, Name, Price, Status, SuperItemID) VALUES
 ('CAT1', 'Bún Phở Mì', 0, 'Available', NULL),
 ('CAT2', 'Cơm', 0, 'Available', NULL),
@@ -242,25 +236,22 @@ INSERT INTO Item (ItemID, Name, Price, Status, SuperItemID) VALUES
 ('F001', 'Phở Bò Wagyu', 150000, 'Available', 'CAT1'),
 ('F002', 'Cơm Tấm Sườn', 65000, 'Available', 'CAT2'),
 ('F003', 'Bún Chả Obama', 70000, 'Available', 'CAT1'),
-('F004', 'Mì Ý Sốt Kem', 120000, 'Unavailable', 'CAT1'),
+('F004', 'Mì Ý Sốt Kem', 120000, 'Available', 'CAT1'),
 ('D001', 'Cafe Sữa Đá', 35000, 'Available', 'CAT4'),
 ('D002', 'Trà Đào Cam Sả', 45000, 'Available', 'CAT4'),
 ('D003', 'Sinh Tố Bơ', 50000, 'Available', 'CAT4'),
 ('D004', 'Bánh Flan', 20000, 'Available', 'CAT3');
 
-INSERT INTO Material (MaterialID, Quantity) VALUES
-('M001', 50), -- Thịt bò (kg)
-('M002', 100), -- Gạo (kg)
-('M003', 30), -- Sườn heo (kg)
-('M004', 20), -- Cafe hạt (kg)
-('M005', 50), -- Sữa đặc (lon)
-('M006', 10), -- Bơ (kg)
-('M007', 500); -- Trứng gà (quả)
+INSERT INTO Material (MaterialID, Name, Quantity) VALUES
+('M001', 'Thịt bò Kobe', 50),
+('M002', 'Gạo ST25', 100),
+('M003', 'Sườn non', 30),
+('M004', 'Cafe Arabica', 20),
+('M005', 'Sữa Ông Thọ', 50),
+('M006', 'Bơ lạt', 10),
+('M007', 'Trứng gà ta', 500);
 
--- =============================================
 -- 5. QDMaterial (Manager quyết định công thức)
--- =============================================
--- Khóa chính là (QDMaterialID, QDItemID) -> Một món dùng 1 nguyên liệu 1 lần
 INSERT INTO QDMaterial (QDMaterialID, QDItemID, QDManagerID) VALUES
 ('M001', 'F001', 'MGR05'), -- Phở bò dùng Thịt bò
 ('M002', 'F002', 'MGR05'), -- Cơm tấm dùng Gạo
@@ -270,42 +261,31 @@ INSERT INTO QDMaterial (QDMaterialID, QDItemID, QDManagerID) VALUES
 ('M007', 'D004', 'MGR05'), -- Bánh Flan dùng Trứng
 ('M005', 'D004', 'MGR05'); -- Bánh Flan dùng Sữa đặc
 
--- =============================================
--- 6. PROMOTION (Khuyến mãi)
--- =============================================
+-- 6. PROMOTION 
 INSERT INTO Promotion (PromoID, Description, MinValue, ExpireDate, DiscountPercent) VALUES
 ('P001', 'Grand Opening', 0, '2025-12-31', 20.00),
 ('P002', 'VIP Customer', 1000000, '2026-01-01', 15.00),
-('P003', 'Summer Sale', 200000, '2024-08-30', 10.00),
-('P004', 'Happy Hour', 50000, '2024-12-31', 5.00),
-('P005', 'Expired Voucher', 0, '2020-01-01', 50.00);
+('P003', 'Summer Sale', 200000, '2026-08-30', 10.00),
+('P004', 'Happy Hour', 50000, '2026-12-31', 5.00),
+('P005', 'Expired Voucher', 0, '2026-01-01', 50.00);
 
--- =============================================
 -- 7. ORDER & INVOICE PROCESS
--- =============================================
-
--- BƯỚC 1: Tạo Đơn hàng (ROrder)
--- Lưu ý: OTableID NOT NULL (phải có bàn)
 INSERT INTO ROrder (OrderID, CreatedAt, Status, Quantity, OTableID) VALUES
 ('ORD01', '2023-11-26 08:00:00', 'Paid', 2, 101),
 ('ORD02', '2023-11-26 09:30:00', 'Paid', 3, 201),
-('ORD03', '2023-11-26 10:15:00', 'Serving', 1, 104),
-('ORD04', '2023-11-26 11:00:00', 'Cancelled', 0, 103),
-('ORD05', '2023-11-26 12:00:00', 'Paid', 4, 101), -- Khách bàn 101 quay lại ăn trưa
-('ORD06', '2023-11-26 12:30:00', 'Serving', 2, 104);
+('ORD03', '2023-11-26 10:15:00', 'Paid', 1, 104),
+('ORD04', '2023-11-26 11:00:00', 'Paid', 0, 103),
+('ORD05', '2023-11-26 12:00:00', 'Paid', 4, 101), 
+('ORD06', '2023-11-26 12:30:00', 'Paid', 2, 104);
 
--- BƯỚC 2: PTOrder (Phân công Waiter phụ trách Order & Customer)
--- Lưu ý: PTStaffID, PTCustomerID NOT NULL
 INSERT INTO PTOrder (PTOrderID, PTStaffID, PTCustomerID) VALUES
 ('ORD01', 'ST09', 'C001'),
-('ORD02', 'ST11', 'C005'), -- Khách VIP C005
+('ORD02', 'ST11', 'C005'), 
 ('ORD03', 'ST10', 'C002'),
 ('ORD04', 'ST13', 'C003'),
-('ORD05', 'ST09', 'C001'), -- Khách C001 quay lại
+('ORD05', 'ST09', 'C001'), 
 ('ORD06', 'ST12', 'C004');
 
--- BƯỚC 3: Detail (Chi tiết món ăn - Chef nấu)
--- Lưu ý: DOrderID, DItemID, DStaffID NOT NULL
 INSERT INTO Detail (DOrderID, DItemID, DStaffID, Quantity) VALUES
 -- Order 1: 1 Phở, 1 Cafe
 ('ORD01', 'F001', 'ST01', 1),
@@ -320,27 +300,20 @@ INSERT INTO Detail (DOrderID, DItemID, DStaffID, Quantity) VALUES
 -- Order 6: 2 Phở
 ('ORD06', 'F001', 'ST01', 2);
 
--- BƯỚC 4: Invoice (Xuất hóa đơn)
--- Lưu ý: CustomerID NOT NULL (theo lệnh Alter của bạn)
 INSERT INTO Invoice (InvoiceID, DateCreated, Tax, IStaffID, CustomerID) VALUES
-('INV01', '2023-11-26 09:00:00', 15000, 'ST05', 'C001'), -- Cho ORD01
-('INV02', '2023-11-26 10:30:00', 17500, 'ST06', 'C005'), -- Cho ORD02
-('INV03', '2023-11-26 13:00:00', 8000, 'ST05', 'C001'),  -- Cho ORD05
-('INV04', '2023-11-26 12:10:00', 25000, 'ST05', 'C001'),  -- lại cho ORD05
+('INV01', '2023-11-26 09:00:00', 15000, 'ST05', 'C001'), 
+('INV02', '2023-11-26 10:30:00', 17500, 'ST06', 'C005'), 
+('INV03', '2023-11-26 13:00:00', 8000, 'ST05', 'C001'),  
+('INV04', '2023-11-26 12:10:00', 25000, 'ST05', 'C001'),  
 ('INV05', '2023-11-26 18:00:00', 10000, 'ST06', 'C007'); 
 
--- BƯỚC 5: YPromo (Áp mã khuyến mãi vào Hóa đơn & Đơn hàng)
--- Lưu ý: YPromoID là PK (mỗi mã promo chỉ xuất hiện 1 lần ở bảng này theo schema hiện tại)
--- Lưu ý 2: Các cột đều NOT NULL
 INSERT INTO YPromo (YPromoID, YInvoiceID, YOrderID) VALUES
-('P001', 'INV01', 'ORD01'), -- HĐ 1 dùng mã Khai trương
-('P002', 'INV02', 'ORD02'), -- HĐ 2 dùng mã VIP
-('P004', 'INV03', 'ORD05'), -- HĐ 3 dùng mã Happy Hour
+('P001', 'INV01', 'ORD01'), 
+('P002', 'INV02', 'ORD02'), 
+('P004', 'INV03', 'ORD05'), 
 ('P003', 'INV04', 'ORD05'),
-('P005', 'INV05', 'ORD01'); -- Giả sử áp dụng thêm mã giảm giá cũ cho đơn cũ (dữ liệu test)
+('P005', 'INV05', 'ORD01'); 
 
--- BƯỚC 6: Payment (Thanh toán)
--- Lưu ý: PStaffID NOT NULL (phải có thu ngân)
 INSERT INTO Payment (PaymentID, Amount, PayDate, Method, Status, PInvoiceID, PStaffID) VALUES
 ('PAY01', 165000, '2023-11-26 09:05:00', 'Cash', 'Success', 'INV01', 'ST05'),
 ('PAY02', 192500, '2023-11-26 10:35:00', 'Card', 'Success', 'INV02', 'ST06'),
@@ -348,14 +321,16 @@ INSERT INTO Payment (PaymentID, Amount, PayDate, Method, Status, PInvoiceID, PSt
 ('PAY04', 275000, '2023-11-26 12:15:00', 'Cash', 'Success', 'INV04', 'ST05'),
 ('PAY05', 110000, '2023-11-26 18:05:00', 'E-Wallet', 'Success', 'INV05', 'ST06');
 
--- =============================================
--- 8. CustomerBill (Lịch sử mua hàng - Log)
--- =============================================
 INSERT INTO CustomerBill (HCustomerID) VALUES
 ('C001'),
 ('C005'),
-('C001'), -- Mua lần 2
+('C001'), 
 ('C002');
+
+CREATE USER 'sManager'@'localhost' IDENTIFIED BY '123456';
+GRANT ALL PRIVILEGES ON RestaurantDatabase.* TO 'sManager'@'localhost';
+FLUSH PRIVILEGES;
+
 
 
 

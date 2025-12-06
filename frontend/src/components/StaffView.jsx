@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getTables, completeOrder } from '../api';
+import { getTables, completeOrder, updateTable } from '../api';
 import './StaffView.css';
 
 function StaffView() {
@@ -46,8 +46,17 @@ function StaffView() {
 
   if (loading) return <div className="loading">⏳ Đang tải...</div>;
 
-  const occupiedTables = tables.filter((t) => t.status === 'Occupied' && t.current_order);
+  const occupiedTables = tables.filter((t) => t.status === 'Occupied' || t.status === 'Reserved');
   const availableTables = tables.filter((t) => t.status === 'Available');
+
+  const handleStatusChange = async (tableId, newStatus) => {
+    try {
+      await updateTable(tableId, { status: newStatus });
+      loadTables();
+    } catch (err) {
+      setError('Không thể cập nhật trạng thái bàn!');
+    }
+  };
 
   return (
     <div className="staff-view">
@@ -61,7 +70,7 @@ function StaffView() {
         <div className="summary-card" style={{ borderLeftColor: '#e74c3c' }}>
           <div className="summary-icon">🔴</div>
           <div className="summary-value">{occupiedTables.length}</div>
-          <div className="summary-label">Đang Phục Vụ</div>
+          <div className="summary-label">Đang Phục Vụ / Đặt Trước</div>
         </div>
         <div className="summary-card" style={{ borderLeftColor: '#27ae60' }}>
           <div className="summary-icon">🟢</div>
@@ -73,39 +82,59 @@ function StaffView() {
           <div className="summary-value">{tables.length}</div>
           <div className="summary-label">Tổng Bàn</div>
         </div>
-        <div className="summary-card" style={{ borderLeftColor: '#9b59b6' }}>
-          <div className="summary-icon">📋</div>
-          <div className="summary-value">{occupiedTables.length}</div>
-          <div className="summary-label">Tổng Đơn</div>
-        </div>
       </div>
 
-      {/* Available Tables */}
+      {/* Table Management Section */}
       <div className="view-section">
-        <h2 className="section-title">🟢 Bàn Trống ({availableTables.length})</h2>
-
-        {availableTables.length === 0 ? (
-          <div className="no-data">
-            <p>Tất cả bàn đang được sử dụng!</p>
-          </div>
-        ) : (
-          <div className="available-tables">
-            {availableTables.map((table) => (
-              <div key={table.tableid} className="available-card">
-                <div className="available-number">#{table.tablenumber}</div>
-                <div className="available-area">{table.area}</div>
-                <div className="available-status">🟢 Sẵn sàng</div>
+        <h2 className="section-title">📋 Quản Lý Bàn</h2>
+        <div className="tables-grid">
+          {tables.map((table) => (
+            <div 
+              key={table.tableid} 
+              className={`table-card ${table.status.toLowerCase()}`}
+            >
+              <div className="table-header">
+                <span className="table-number">Bàn {table.tablenumber}</span>
+                <span className="table-area">{table.area}</span>
               </div>
-            ))}
-          </div>
-        )}
+              
+              <div className="table-status-control">
+                <div className={`status-badge ${table.status.toLowerCase()}`}>
+                  {table.status === 'Available' ? '🟢 Trống' : 
+                   table.status === 'Occupied' ? '🔴 Có Khách' : '🟡 Đặt Trước'}
+                </div>
+                
+                <div className="status-actions">
+                  {table.status !== 'Available' && (
+                    <button 
+                      className="action-btn btn-available"
+                      onClick={() => handleStatusChange(table.tableid, 'Available')}
+                      title="Đánh dấu là Trống"
+                    >
+                      🟢
+                    </button>
+                  )}
+                  {table.status !== 'Occupied' && (
+                    <button 
+                      className="action-btn btn-occupied"
+                      onClick={() => handleStatusChange(table.tableid, 'Occupied')}
+                      title="Đánh dấu là Có Khách"
+                    >
+                      🔴
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Orders in Progress */}
       <div className="view-section">
         <h2 className="section-title">📋 Đơn Hàng Đang Phục Vụ</h2>
 
-        {occupiedTables.length === 0 ? (
+        {occupiedTables.filter(t => t.current_order).length === 0 ? (
           <div className="no-data">
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✨</div>
             <p>Không có đơn hàng nào đang phục vụ!</p>
@@ -113,7 +142,7 @@ function StaffView() {
           </div>
         ) : (
           <div className="orders-list">
-            {occupiedTables.map((table) => {
+            {occupiedTables.filter(t => t.current_order).map((table) => {
               const order = table.current_order;
               const totalPrice = order.total_price || 0;
 

@@ -5,103 +5,21 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.views import TokenObtainPairView
+from datetime import timedelta
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
 
-from .models import Rtable, Rorder, Detail, Item, Staff, Chef, Customer, Invoice, Payment, Promotion, Cashier, Waiter
+from .models import Rtable, Rorder, Detail, Item, Staff, Chef, Customer, Invoice, Payment, Promotion, Cashier, Waiter, Material
 from .serializers import (
     ItemSerializer, TableSerializer, OrderSerializer, OrderDetailSerializer,
     DetailSerializer, CustomerSerializer, InvoiceSerializer, PaymentSerializer,
-    PromotionSerializer, StaffSerializer, ChefSerializer, CashierSerializer, WaiterSerializer
+    PromotionSerializer, StaffSerializer, ChefSerializer, CashierSerializer, WaiterSerializer,
+    CustomTokenObtainPairSerializer, MaterialSerializer
 )
 from .utils import generate_id
 
-# ============================================================
-# TEMPLATE VIEWS (Django Templates - giữ lại cho demo)
-# ============================================================
-def home(request):
-    return render(request, 'core/home.html')
-
-def menu_list(request):
-    items = Item.objects.filter(status='Available', superitemid__isnull=False)
-    return render(request, 'core/menu.html', {'mon_an': items})
-
-def table_list(request):
-    tables = Rtable.objects.all().order_by('tablenumber')
-    return render(request, 'core/table_list.html', {'tables': tables})
-
-def table_detail(request, table_id):
-    table = get_object_or_404(Rtable, tableid=table_id)
-    current_order = Rorder.objects.filter(otableid=table, status='Serving').first()
-    
-    order_details = []
-    total_price = 0
-    
-    if current_order:
-        details = Detail.objects.filter(dorderid=current_order)
-        for d in details:
-            item = d.ditemid 
-            price = item.price 
-            subtotal = d.quantity * price
-            total_price += subtotal
-            
-            order_details.append({
-                'item_name': item.name,
-                'quantity': d.quantity,
-                'price': price,
-                'subtotal': subtotal
-            })
-            
-    menu_items = Item.objects.filter(status='Available', superitemid__isnull=False)
-    
-    context = {
-        'table': table,
-        'order': current_order,
-        'order_details': order_details,
-        'total_price': total_price,
-        'menu_items': menu_items,
-    }
-    return render(request, 'core/table_detail.html', context)
-
-def add_item(request, table_id, item_id):
-    table = get_object_or_404(Rtable, tableid=table_id)
-    item = get_object_or_404(Item, itemid=item_id)
-    
-    order = Rorder.objects.filter(otableid=table, status='Serving').first()
-    
-    if not order:
-        table.status = 'Occupied'
-        table.save()
-        
-        order = Rorder.objects.create(
-            orderid=generate_id('ORD'),
-            createdat=timezone.now(),
-            status='Serving',
-            quantity=0,
-            otableid=table
-        )
-    
-    default_chef = Chef.objects.first() 
-    existing_detail = Detail.objects.filter(dorderid=order, ditemid=item).first()
-    
-    if existing_detail:
-        existing_detail.quantity += 1
-        existing_detail.save()
-    else:
-        Detail.objects.create(
-            dorderid=order,
-            ditemid=item,
-            dstaffid=default_chef, 
-            quantity=1
-        )
-    
-    order.quantity = (order.quantity or 0) + 1
-    order.save()
-    
-    return redirect('table_detail', table_id=table.tableid)
-
-
-# ============================================================
-# REST API VIEWSETS (Django REST Framework)
-# ============================================================
+# REST API 
 
 class ItemViewSet(viewsets.ModelViewSet):
     """
@@ -160,7 +78,6 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     
     def get_serializer_class(self):
-        """Dùng serializer khác nhau tùy action"""
         if self.action == 'add_item':
             return DetailSerializer
         return self.serializer_class
@@ -321,3 +238,64 @@ class WaiterViewSet(viewsets.ModelViewSet):
     queryset = Waiter.objects.all()
     serializer_class = WaiterSerializer
     permission_classes = [AllowAny]
+
+class MaterialViewSet(viewsets.ModelViewSet):
+    """
+    API ViewSet cho Material (Nguyên liệu)
+    """
+    queryset = Material.objects.all()
+    serializer_class = MaterialSerializer
+    permission_classes = [AllowAny] # Should be IsManager in prod
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    Login API: Trả về Access Token + Refresh Token + Role
+    """
+    serializer_class = CustomTokenObtainPairSerializer
+
+class RevenueStatsView(viewsets.ViewSet):
+    """
+    API trả về doanh thu 7 ngày gần nhất
+    GET /api/revenue/
+    """
+    permission_classes = [AllowAny]
+
+    def list(self, request):
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=6)
+        
+        # Initialize revenue map for the last 7 days
+        revenue_map = {}
+        current = start_date
+        while current <= end_date:
+            revenue_map[current] = 0
+            current += timedelta(days=1)
+
+        # Get all paid orders in range
+        # Note: Using Rorder instead of Payment because Payment records might not exist yet
+        orders = Rorder.objects.filter(
+            status='Paid',
+            createdat__date__range=[start_date, end_date]
+        )
+        
+        for order in orders:
+            order_date = order.createdat.date()
+            # Calculate total for this order from its details
+            details = Detail.objects.filter(dorderid=order)
+            order_total = 0
+            for detail in details:
+                if detail.ditemid and detail.ditemid.price:
+                    order_total += (detail.quantity or 0) * detail.ditemid.price
+            
+            if order_date in revenue_map:
+                revenue_map[order_date] += order_total
+        
+        # Format result
+        result = []
+        for date_key in sorted(revenue_map.keys()):
+            result.append({
+                'date': date_key.strftime('%d/%m'),
+                'revenue': revenue_map[date_key]
+            })
+            
+        return Response(result)

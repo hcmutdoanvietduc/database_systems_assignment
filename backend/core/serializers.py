@@ -1,7 +1,8 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import (
     Item, Rtable, Rorder, Detail, Customer, Invoice, 
-    Payment, Promotion, Staff, Chef, Cashier, Waiter
+    Payment, Promotion, Staff, Chef, Cashier, Waiter, Material
 )
 
 # ==================== ITEM SERIALIZER ====================
@@ -159,3 +160,28 @@ class WaiterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Waiter
         fields = ['staffid', 'fluency']
+
+# ==================== MATERIAL SERIALIZER ====================
+class MaterialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Material
+        fields = ['materialid','name', 'quantity']
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        # Add custom claims
+        data['username'] = self.user.username
+        data['role'] = 'Staff' # Default
+        data['fullname'] = '' # Default
+
+        if hasattr(self.user, 'profile'):
+            data['role'] = self.user.profile.role
+            data['fullname'] = self.user.profile.full_name
+        elif self.user.is_superuser:
+            data['role'] = 'Manager'
+            data['fullname'] = 'Super Admin'
+            
+        return data
+

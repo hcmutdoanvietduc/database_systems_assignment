@@ -1,22 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import LoginView from './components/LoginView';
 import CustomerView from './components/CustomerView';
 import StaffView from './components/StaffView';
 import AdminView from './components/AdminView';
+import MaterialManagement from './components/MaterialManagement';
+import { logout } from './api';
 
 function App() {
-  const [userRole, setUserRole] = useState(null);
+  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
+  const [username, setUsername] = useState(localStorage.getItem('username') || '');
   const [currentView, setCurrentView] = useState('main');
 
-  const handleLogin = (role) => {
+  // Effect to restore session
+  useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    const storedUsername = localStorage.getItem('username');
+    if (role) {
+      setUserRole(role);
+      if (storedUsername) setUsername(storedUsername);
+      
+      // Redirect logic based on role
+      if (role === 'Manager') setCurrentView('admin');
+      else if (role === 'Staff') setCurrentView('staff');
+      else if (role === 'Customer') setCurrentView('customer');
+    }
+  }, []);
+
+  const handleLogin = (role, name) => {
     setUserRole(role);
-    setCurrentView('main');
+    setUsername(name);
+    // Redirect logic
+    if (role === 'Manager') setCurrentView('admin');
+    else if (role === 'Staff') setCurrentView('staff');
+    else if (role === 'Customer') setCurrentView('customer');
+    else setCurrentView('main');
   };
 
   const handleLogout = () => {
-    setUserRole(null);
-    setCurrentView('main');
+    logout(); // Clears storage and reloads
   };
 
   // Nếu chưa đăng nhập, hiện màn hình login
@@ -27,17 +49,18 @@ function App() {
   // Định nghĩa menu theo role
   const getMenuItems = () => {
     switch (userRole) {
-      case 'customer':
+      case 'Manager':
         return [
-          { id: 'main', icon: '🍽️', label: 'Đặt Món' }
+          { id: 'admin', icon: '📊', label: 'Tổng Quan' },
+          { id: 'materials', icon: '📦', label: 'Nguyên Liệu' }
         ];
-      case 'staff':
+      case 'Staff':
         return [
-          { id: 'main', icon: '📋', label: 'Quản Lý Đơn Hàng' }
+          { id: 'staff', icon: '📋', label: 'Quản Lý Đơn Hàng' }
         ];
-      case 'admin':
+      case 'Customer':
         return [
-          { id: 'main', icon: '📊', label: 'Tổng Quan' }
+          { id: 'customer', icon: '🍽️', label: 'Đặt Món' }
         ];
       default:
         return [];
@@ -46,9 +69,9 @@ function App() {
 
   const getRoleName = () => {
     switch (userRole) {
-      case 'customer': return 'Khách Hàng';
-      case 'staff': return 'Nhân Viên';
-      case 'admin': return 'Quản Lý';
+      case 'Manager': return 'Quản Lý';
+      case 'Staff': return 'Nhân Viên';
+      case 'Customer': return 'Khách Hàng';
       default: return 'User';
     }
   };
@@ -72,11 +95,10 @@ function App() {
         ))}
         
         <div className="user-info">
-          Xin chào, <b>{getRoleName()}</b><br />
+          Xin chào, <b>{username || getRoleName()}</b><br />
           <span style={{ fontSize: '0.85em', opacity: 0.7 }}>
-            {userRole === 'customer' && 'Khách hàng'}
-            {userRole === 'staff' && 'Nhân viên phục vụ'}
-            {userRole === 'admin' && 'Quản lý hệ thống'}
+            {userRole === 'Manager' && 'Quản lý hệ thống'}
+            {userRole === 'Staff' && 'Nhân viên phục vụ'}
           </span><br />
           <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
             Đăng xuất
@@ -87,9 +109,10 @@ function App() {
       {/* Main Content */}
       <div className="main-wrapper">
         <div className="section active">
-          {userRole === 'customer' && <CustomerView />}
-          {userRole === 'staff' && <StaffView />}
-          {userRole === 'admin' && <AdminView />}
+          {userRole === 'Manager' && currentView === 'admin' && <AdminView />}
+          {userRole === 'Manager' && currentView === 'materials' && <MaterialManagement />}
+          {userRole === 'Staff' && <StaffView />}
+          {userRole === 'Customer' && <CustomerView />}
         </div>
       </div>
     </div>
