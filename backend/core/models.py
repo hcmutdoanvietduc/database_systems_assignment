@@ -103,6 +103,7 @@ class Item(models.Model):
     name = models.CharField(db_column='Name', max_length=100)
     price = models.DecimalField(db_column='Price', max_digits=10, decimal_places=2, blank=True, null=True)
     status = models.CharField(db_column='Status', max_length=11, blank=True, null=True)
+    imageurl = models.CharField(db_column='ImageURL', max_length=500, blank=True, null=True)
     superitemid = models.ForeignKey('self', models.DO_NOTHING, db_column='SuperItemID', blank=True, null=True)
 
     class Meta:

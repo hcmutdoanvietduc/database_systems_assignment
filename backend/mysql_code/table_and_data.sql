@@ -64,6 +64,7 @@ CREATE TABLE Item (
     Name         VARCHAR(100) NOT NULL,
     Price        DECIMAL(10,2) CHECK (Price >= 0),  -- price = 0 -> loại thức ăn
     Status       ENUM('Available','Unavailable') DEFAULT 'Available',
+    ImageURL     VARCHAR(500),
     SuperItemID  VARCHAR(10),
     FOREIGN KEY (SuperItemID) REFERENCES Item(ItemID)
 );

@@ -21,6 +21,46 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Add Response Interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Nếu lỗi 401 và chưa retry
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+          // Không có refresh token -> Logout
+          logout();
+          return Promise.reject(error);
+        }
+
+        // Gọi API refresh token
+        const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+          refresh: refreshToken,
+        });
+
+        const { access } = response.data;
+        localStorage.setItem('accessToken', access);
+
+        // Retry request ban đầu với token mới
+        originalRequest.headers['Authorization'] = `Bearer ${access}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh token cũng hết hạn -> Logout
+        logout();
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // ==================== AUTH ====================
 export const login = (username, password) => {
   return api.post('/login/', { username, password });

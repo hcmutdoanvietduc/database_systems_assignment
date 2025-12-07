@@ -27,6 +27,9 @@ function CustomerView() {
       const tablesData = tablesRes.data.results || tablesRes.data;
       const itemsData = itemsRes.data.results || itemsRes.data;
       
+      console.log('Items loaded:', itemsData); // Debug: Xem API trả về gì
+      console.log('First item imageurl:', itemsData[0]?.imageurl); // Debug: Xem imageurl
+      
       setTables(Array.isArray(tablesData) ? tablesData : []);
       setItems(Array.isArray(itemsData) ? itemsData : []);
       setError(null);
