@@ -96,7 +96,7 @@ npm start
 
   * Server chạy tại: `http://localhost:3000`
 
-### 7. Sử dụng
+## 3. Sử dụng
 Truy cập giao diện tại `http://localhost:3000`
 
 Đối với mật khẩu, hiện đang dùng chung là 123456
