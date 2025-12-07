@@ -325,7 +325,13 @@ function CustomerView() {
                 .filter((item) => item.superitemid === 'CAT1')
                 .map((item) => (
                   <div key={item.itemid} className="food-item" onClick={() => handleAddItem(item.itemid)}>
-                    <div className="food-img">🍽️</div>
+                    <div className="food-img">
+                      {item.imageurl ? (
+                        <img src={item.imageurl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                      ) : (
+                        '🍽️'
+                      )}
+                    </div>
                     <div className="food-info">
                       <h3>{item.name}</h3>
                       <div className="food-price">₫ {Math.round(item.price).toLocaleString('vi-VN')}</div>
@@ -344,7 +350,13 @@ function CustomerView() {
                 .filter((item) => item.superitemid === 'CAT2')
                 .map((item) => (
                   <div key={item.itemid} className="food-item" onClick={() => handleAddItem(item.itemid)}>
-                    <div className="food-img">🍽️</div>
+                    <div className="food-img">
+                      {item.imageurl ? (
+                        <img src={item.imageurl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                      ) : (
+                        '🍽️'
+                      )}
+                    </div>
                     <div className="food-info">
                       <h3>{item.name}</h3>
                       <div className="food-price">₫ {Math.round(item.price).toLocaleString('vi-VN')}</div>
@@ -363,7 +375,13 @@ function CustomerView() {
                 .filter((item) => item.superitemid === 'CAT3')
                 .map((item) => (
                   <div key={item.itemid} className="food-item" onClick={() => handleAddItem(item.itemid)}>
-                    <div className="food-img">🍽️</div>
+                    <div className="food-img">
+                      {item.imageurl ? (
+                        <img src={item.imageurl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                      ) : (
+                        '🍽️'
+                      )}
+                    </div>
                     <div className="food-info">
                       <h3>{item.name}</h3>
                       <div className="food-price">₫ {Math.round(item.price).toLocaleString('vi-VN')}</div>
@@ -382,7 +400,13 @@ function CustomerView() {
                 .filter((item) => item.superitemid === 'CAT4')
                 .map((item) => (
                   <div key={item.itemid} className="food-item" onClick={() => handleAddItem(item.itemid)}>
-                    <div className="food-img">🍽️</div>
+                    <div className="food-img">
+                      {item.imageurl ? (
+                        <img src={item.imageurl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                      ) : (
+                        '🍽️'
+                      )}
+                    </div>
                     <div className="food-info">
                       <h3>{item.name}</h3>
                       <div className="food-price">₫ {Math.round(item.price).toLocaleString('vi-VN')}</div>
