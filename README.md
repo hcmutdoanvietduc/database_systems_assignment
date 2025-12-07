@@ -53,6 +53,7 @@ Vì hệ thống chạy trên CSDL có sẵn, hãy đảm bảo đã chạy các
 1.  `table_and_data.sql`
 2.  `store_and_funcs.sql`
 3.  `trigger.sql`
+4.  `Update_image_url.sql`
 
 ### Bước 6: Chạy Server
 
