@@ -7,6 +7,9 @@ function StaffView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
 
   useEffect(() => {
     loadTables();
@@ -28,18 +31,32 @@ function StaffView() {
     }
   };
 
-  const handleCompleteOrder = async (orderId) => {
-    if (!window.confirm('Xác nhận đã thanh toán xong?')) {
+  const handleCompleteOrder = (orderId) => {
+    setSelectedOrderId(orderId);
+    setCustomerInfo({ name: '', phone: '' });
+    setShowPaymentModal(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!customerInfo.name.trim() || !customerInfo.phone.trim()) {
+      setError('Vui lòng nhập đầy đủ tên và số điện thoại khách hàng!');
+      setTimeout(() => setError(null), 3000);
       return;
     }
 
     try {
-      await completeOrder(orderId);
-      setSuccess('Đã hoàn thành đơn hàng!');
-      await loadTables(); // Đảm bảo load xong trước khi hiện success
+      await completeOrder(selectedOrderId, {
+        customer_name: customerInfo.name.trim(),
+        customer_phone: customerInfo.phone.trim()
+      });
+      setSuccess('Đã hoàn thành đơn hàng và lưu thông tin khách hàng!');
+      setShowPaymentModal(false);
+      setCustomerInfo({ name: '', phone: '' });
+      await loadTables();
       setTimeout(() => setSuccess(null), 2000);
     } catch (err) {
-      setError('Lỗi khi hoàn thành đơn!');
+      const errorMsg = err.response?.data?.error || 'Lỗi khi hoàn thành đơn!';
+      setError(errorMsg);
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -228,6 +245,46 @@ function StaffView() {
           </div>
         )}
       </div>
+
+      {/* Modal Thanh Toán */}
+      {showPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Thông Tin Khách Hàng</h2>
+            <form onSubmit={(e) => { e.preventDefault(); handleConfirmPayment(); }}>
+              <div className="form-group">
+                <label>Tên Khách Hàng *</label>
+                <input
+                  type="text"
+                  placeholder="Nhập tên khách hàng"
+                  value={customerInfo.name}
+                  onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label>Số Điện Thoại *</label>
+                <input
+                  type="text"
+                  placeholder="Nhập số điện thoại"
+                  value={customerInfo.phone}
+                  onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowPaymentModal(false)}>
+                  Hủy
+                </button>
+                <button type="submit" className="btn-confirm">
+                  Xác Nhận Thanh Toán
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

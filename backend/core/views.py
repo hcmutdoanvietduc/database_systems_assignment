@@ -10,7 +10,7 @@ from datetime import timedelta
 from django.db.models import Sum
 from django.db.models.functions import TruncDate
 
-from .models import Rtable, Rorder, Detail, Item, Staff, Chef, Customer, Invoice, Payment, Promotion, Cashier, Waiter, Material
+from .models import Rtable, Rorder, Detail, Item, Staff, Chef, Customer, Invoice, Payment, Promotion, Cashier, Waiter, Material, Ptorder
 from .serializers import (
     ItemSerializer, TableSerializer, OrderSerializer, OrderDetailSerializer,
     DetailSerializer, CustomerSerializer, InvoiceSerializer, PaymentSerializer,
@@ -164,17 +164,91 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         POST /api/orders/{id}/complete/
         Hoàn thành đơn hàng (đổi status thành 'Paid')
+        Body: {"customer_name": "Tên KH", "customer_phone": "0123456789"}
         """
         order = self.get_object()
-        order.status = 'Paid'
-        order.save()
+        customer_name = request.data.get('customer_name', '').strip()
+        customer_phone = request.data.get('customer_phone', '').strip()
         
-        # Cập nhật trạng thái bàn về Available
-        order.otableid.status = 'Available'
-        order.otableid.save()
+        if not customer_name or not customer_phone:
+            return Response(
+                {'error': 'Vui lòng nhập đầy đủ tên và số điện thoại khách hàng!'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        serializer = self.get_serializer(order)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            # Tìm hoặc tạo khách hàng bằng stored procedure
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "CALL sp_GetOrCreateCustomer(%s, %s)",
+                    [customer_phone, customer_name]
+                )
+                # Lấy CustomerID từ kết quả SELECT
+                result = cursor.fetchone()
+                customer_id = result[0] if result else None
+            
+            if not customer_id:
+                return Response(
+                    {'error': 'Không thể tạo thông tin khách hàng!'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Lấy object Customer từ database
+            customer = Customer.objects.get(customerid=customer_id)
+            
+            # Lấy nhân viên phục vụ (lấy staff từ Detail - Chef)
+            staff_obj = None
+            detail = Detail.objects.filter(dorderid=order).first()
+            if detail:
+                # detail.dstaffid là Chef object, cần lấy Staff từ Chef.staffid
+                chef = detail.dstaffid
+                staff_obj = Staff.objects.get(staffid=chef.staffid.staffid)
+            else:
+                # Nếu không có detail, lấy staff đầu tiên trong hệ thống
+                staff_obj = Staff.objects.first()
+            
+            if not staff_obj:
+                return Response(
+                    {'error': 'Không tìm thấy nhân viên phục vụ!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Tạo PTOrder để liên kết Customer với Order
+            Ptorder.objects.get_or_create(
+                ptorderid=order,
+                defaults={
+                    'ptstaffid': staff_obj,
+                    'ptcustomerid': customer
+                }
+            )
+            
+            # Cập nhật trạng thái đơn hàng
+            order.status = 'Paid'
+            order.save()
+            
+            # Cập nhật trạng thái bàn về Available
+            order.otableid.status = 'Available'
+            order.otableid.save()
+            
+            serializer = self.get_serializer(order)
+            return Response({
+                'order': serializer.data,
+                'customer': {
+                    'id': customer.customerid,
+                    'name': customer.fullname,
+                    'phone': customer.phone
+                },
+                'message': 'Hoàn thành đơn hàng và lưu thông tin khách hàng thành công!'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            print(f"Error completing order: {str(e)}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': f'Lỗi khi hoàn thành đơn hàng: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['delete'])
     def delete_order(self, request, pk=None):
@@ -226,6 +300,18 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.all()
     serializer_class = InvoiceSerializer
     permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        """
+        Lọc invoices theo customer_id nếu có query param
+        """
+        queryset = Invoice.objects.all()
+        customer_id = self.request.query_params.get('customer_id', None)
+        
+        if customer_id:
+            queryset = queryset.filter(customerid=customer_id)
+        
+        return queryset
 
 
 class PaymentViewSet(viewsets.ModelViewSet):

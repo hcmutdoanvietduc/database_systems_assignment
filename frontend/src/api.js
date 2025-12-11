@@ -120,8 +120,8 @@ export const addItemToOrder = (orderId, itemId, quantity) => {
   });
 };
 
-export const completeOrder = (orderId) => {
-  return api.post(`/orders/${orderId}/complete/`);
+export const completeOrder = (orderId, customerData) => {
+  return api.post(`/orders/${orderId}/complete/`, customerData);
 };
 
 export const deleteOrder = (orderId) => {

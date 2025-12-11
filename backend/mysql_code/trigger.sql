@@ -144,7 +144,7 @@ FOR EACH ROW
 BEGIN
     DECLARE v_subtotal DECIMAL(14,2) DEFAULT 0.00;
     DECLARE v_tax DECIMAL(14,2) DEFAULT 0.00;
-    DECLARE v_default_customer VARCHAR(10) DEFAULT 'C001';
+    DECLARE v_customer_id VARCHAR(10);
     DECLARE v_default_cashier VARCHAR(10);
     DECLARE v_invoice_id VARCHAR(10);
     
@@ -166,6 +166,17 @@ BEGIN
             -- Tính thuế 10%
             SET v_tax = ROUND(v_subtotal * 0.10, 2);
             
+            -- Lấy CustomerID từ PTOrder (nếu có)
+            SELECT PTCustomerID INTO v_customer_id
+            FROM PTOrder
+            WHERE PTOrderID = NEW.OrderID
+            LIMIT 1;
+            
+            -- Nếu không có PTOrder, dùng customer mặc định C001
+            IF v_customer_id IS NULL THEN
+                SET v_customer_id = 'C001';
+            END IF;
+            
             -- Lấy cashier đầu tiên làm mặc định
             SELECT StaffID INTO v_default_cashier
             FROM Cashier
@@ -181,9 +192,9 @@ BEGIN
             -- Generate InvoiceID tự động
             SET v_invoice_id = fn_GenerateInvoiceID();
             
-            -- Tạo Invoice mới
+            -- Tạo Invoice mới với CustomerID từ PTOrder
             INSERT INTO Invoice (InvoiceID, DateCreated, Tax, IStaffID, CustomerID)
-            VALUES (v_invoice_id, NOW(), v_tax, v_default_cashier, v_default_customer);
+            VALUES (v_invoice_id, NOW(), v_tax, v_default_cashier, v_customer_id);
             
             -- Liên kết Invoice với Order qua YPromo (dùng promotion mặc định P001)
             INSERT INTO YPromo (YPromoID, YInvoiceID, YOrderID)

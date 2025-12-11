@@ -84,7 +84,9 @@ CREATE TABLE Invoice (
     DateCreated  DATETIME DEFAULT CURRENT_TIMESTAMP,
     Tax          DECIMAL(10,2),
     IStaffID     VARCHAR(10) NOT NULL,
-    FOREIGN KEY (IStaffID) REFERENCES Cashier(StaffID)
+    CustomerID   VARCHAR(10),
+    FOREIGN KEY (IStaffID) REFERENCES Cashier(StaffID),
+    FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID)
 );
 CREATE TABLE Payment (
     PaymentID     VARCHAR(10) PRIMARY KEY,
@@ -147,10 +149,7 @@ CREATE TABLE YPromo (
     FOREIGN KEY (YOrderID) REFERENCES ROrder(OrderID),
     FOREIGN KEY (YPromoID) REFERENCES Promotion(PromoID) 
 );
-ALTER TABLE Invoice
-ADD COLUMN CustomerID VARCHAR(10) NOT NULL,
-ADD CONSTRAINT FK_Invoice_Customer
-    FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID);
+
 ALTER TABLE Promotion 
 ADD DiscountPercent DECIMAL(5,2) DEFAULT 0;
 

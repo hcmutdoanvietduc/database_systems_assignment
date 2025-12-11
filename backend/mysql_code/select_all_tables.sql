@@ -1,3 +1,5 @@
+USE restaurantdatabase;
+
 SELECT * FROM Admin;
 SELECT * FROM Manager;
 

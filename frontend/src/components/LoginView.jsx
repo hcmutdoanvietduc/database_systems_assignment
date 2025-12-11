@@ -37,7 +37,7 @@ function LoginView({ onLogin }) {
     <div className="login-overlay">
       <div className="login-container" style={{ maxWidth: '400px' }}>
         <div className="login-header">
-          <h1>🔐 Đăng Nhập</h1>
+          <h1>Đăng Nhập</h1>
           <p>Hệ thống quản lý nhà hàng</p>
         </div>
 
@@ -94,7 +94,7 @@ function LoginView({ onLogin }) {
               fontWeight: 'bold'
             }}
           >
-            👤 Khách hàng (Không cần đăng nhập)
+            Khách hàng (Không cần đăng nhập)
           </button>
         </div>
         

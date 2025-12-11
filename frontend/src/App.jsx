@@ -6,6 +6,7 @@ import StaffView from './components/StaffView';
 import AdminView from './components/AdminView';
 import MaterialManagement from './components/MaterialManagement';
 import StaffManagement from './components/StaffManagement';
+import CustomerManagement from './components/CustomerManagement';
 import { logout } from './api';
 
 function App() {
@@ -54,7 +55,8 @@ function App() {
         return [
           { id: 'admin', label: 'Tổng Quan' },
           { id: 'materials', label: 'Nguyên Liệu' },
-          { id: 'staff-management', label: 'Quản Lý NV' }
+          { id: 'staff-management', label: 'Quản Lý NV' },
+          { id: 'customers', label: 'Khách Hàng' }
         ];
       case 'Staff':
         return [
@@ -114,6 +116,7 @@ function App() {
           {userRole === 'Manager' && currentView === 'admin' && <AdminView />}
           {userRole === 'Manager' && currentView === 'materials' && <MaterialManagement />}
           {userRole === 'Manager' && currentView === 'staff-management' && <StaffManagement />}
+          {userRole === 'Manager' && currentView === 'customers' && <CustomerManagement />}
           {userRole === 'Staff' && <StaffView />}
           {userRole === 'Customer' && <CustomerView />}
         </div>

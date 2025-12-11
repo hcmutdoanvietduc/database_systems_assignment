@@ -533,3 +533,52 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_GetOrCreateCustomer;
+DELIMITER $$
+
+CREATE PROCEDURE sp_GetOrCreateCustomer(
+    IN pPhone VARCHAR(15),
+    IN pName VARCHAR(100)
+)
+BEGIN
+    DECLARE v_existingID VARCHAR(10);
+    DECLARE v_maxNum INT DEFAULT 0;
+    
+    -- Kiểm tra xem số điện thoại đã tồn tại chưa
+    SELECT CustomerID INTO v_existingID
+    FROM Customer
+    WHERE Phone = pPhone
+    LIMIT 1;
+    
+    IF v_existingID IS NOT NULL THEN
+        -- Đã tồn tại, cập nhật tên nếu khác
+        UPDATE Customer
+        SET FullName = pName
+        WHERE CustomerID = v_existingID AND FullName != pName;
+        
+        -- Trả về CustomerID cũ
+        SELECT v_existingID AS CustomerID;
+    ELSE
+        -- Chưa tồn tại, tạo CustomerID mới
+        -- Lấy số lớn nhất từ CustomerID hiện có (C001 -> 1, C002 -> 2)
+        SELECT IFNULL(MAX(CAST(SUBSTRING(CustomerID, 2) AS UNSIGNED)), 0)
+        INTO v_maxNum
+        FROM Customer
+        WHERE CustomerID REGEXP '^C[0-9]+$';
+        
+        -- Tạo CustomerID mới: C001, C002, C003, ...
+        SET v_maxNum = v_maxNum + 1;
+        SET v_existingID = CONCAT('C', LPAD(v_maxNum, 3, '0'));
+        
+        -- Insert khách hàng mới
+        INSERT INTO Customer (CustomerID, FullName, Phone)
+        VALUES (v_existingID, pName, pPhone);
+        
+        -- Trả về CustomerID mới
+        SELECT v_existingID AS CustomerID;
+    END IF;
+    
+END$$
+
+DELIMITER ;

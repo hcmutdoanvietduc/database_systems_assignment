@@ -1,13 +1,3 @@
--- =====================================================
--- FILE ĐỂ PASTE LINK ẢNH TỪ GITHUB
--- =====================================================
--- Hướng dẫn sử dụng:
--- 1. Tải ảnh lên GitHub repository của bạn
--- 2. Copy link ảnh (raw URL) từ GitHub
--- 3. Paste link vào phần 'PASTE_LINK_ẢNH_Ở_ĐÂY' tương ứng với món ăn
--- 4. Chạy file SQL này để update database
--- =====================================================
-
 USE RestaurantDatabase;
 
 -- =====================================================
@@ -65,13 +55,3 @@ WHERE ItemID = 'D003';
 UPDATE Item 
 SET ImageURL = 'https://raw.githubusercontent.com/hcmutdoanvietduc/database_systems_assignment/refs/heads/DO_NOT_DELETE_Upload_image_url/banh_flan.jpg'
 WHERE ItemID = 'D004';
-
--- =====================================================
--- KIỂM TRA KẾT QUẢ
--- =====================================================
-
--- Chạy lệnh này để xem các món ăn đã có ảnh chưa:
-SELECT ItemID, Name, ImageURL 
-FROM Item 
-WHERE SuperItemID IS NOT NULL
-ORDER BY SuperItemID, ItemID;
