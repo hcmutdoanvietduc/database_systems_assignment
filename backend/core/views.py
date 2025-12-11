@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.db import models
+from django.db import models, connection
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -175,6 +175,36 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(order)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['delete'])
+    def delete_order(self, request, pk=None):
+        """
+        DELETE /api/orders/{id}/delete_order/
+        Xóa đơn hàng và hóa đơn liên quan bằng stored procedure
+        """
+        order = self.get_object()
+        order_id = order.orderid
+        table_id = order.otableid
+        
+        try:
+            with connection.cursor() as cursor:
+                # Gọi stored procedure sp_DeleteOrder
+                cursor.execute("CALL sp_DeleteOrder(%s)", [order_id])
+            
+            # Cập nhật trạng thái bàn về Available
+            if table_id:
+                table_id.status = 'Available'
+                table_id.save()
+            
+            return Response({
+                'message': f'Đã xóa đơn hàng {order_id} và hóa đơn liên quan',
+                'order_id': order_id
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Lỗi khi xóa đơn hàng: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class DetailViewSet(viewsets.ModelViewSet):
@@ -213,10 +243,264 @@ class PromotionViewSet(viewsets.ModelViewSet):
 
 
 class StaffViewSet(viewsets.ModelViewSet):
-    """API ViewSet cho Staff (Nhân viên)"""
+    """
+    API ViewSet cho Staff (Nhân viên)
+    Hỗ trợ lọc theo chức vụ bằng Raw SQL Query:
+    - GET /api/staff/?role=all (tất cả)
+    - GET /api/staff/?role=chef (đầu bếp)
+    - GET /api/staff/?role=cashier (thu ngân)
+    - GET /api/staff/?role=waiter (phục vụ)
+    """
     queryset = Staff.objects.all()
     serializer_class = StaffSerializer
     permission_classes = [AllowAny]
+    
+    def list(self, request, *args, **kwargs):
+        """
+        Override list method để sử dụng Raw SQL Query cho filtering theo role
+        Trả về thông tin staff kèm theo role và details
+        """
+        role = request.query_params.get('role', 'all')
+        
+        # Build raw SQL query based on role with LEFT JOIN để lấy thông tin chi tiết
+        if role == 'chef':
+            sql = """
+                SELECT 
+                    s.StaffID, s.FullName, s.Phone, s.Status, s.SManagerID,
+                    'Đầu Bếp' as RoleName,
+                    CAST(IFNULL(c.Experience, 0) AS CHAR) as DetailInfo
+                FROM staff s
+                INNER JOIN chef c ON s.StaffID = c.StaffID
+            """
+        elif role == 'cashier':
+            sql = """
+                SELECT 
+                    s.StaffID, s.FullName, s.Phone, s.Status, s.SManagerID,
+                    'Thu Ngân' as RoleName,
+                    IFNULL(ca.Education, '') as DetailInfo
+                FROM staff s
+                INNER JOIN cashier ca ON s.StaffID = ca.StaffID
+            """
+        elif role == 'waiter':
+            sql = """
+                SELECT 
+                    s.StaffID, s.FullName, s.Phone, s.Status, s.SManagerID,
+                    'Phục Vụ' as RoleName,
+                    IFNULL(w.Fluency, '') as DetailInfo
+                FROM staff s
+                INNER JOIN waiter w ON s.StaffID = w.StaffID
+            """
+        else:  # all - LEFT JOIN để lấy tất cả staff với role của họ
+            sql = """
+                SELECT 
+                    s.StaffID, 
+                    s.FullName, 
+                    s.Phone, 
+                    s.Status, 
+                    s.SManagerID,
+                    CASE
+                        WHEN c.StaffID IS NOT NULL THEN 'Đầu Bếp'
+                        WHEN ca.StaffID IS NOT NULL THEN 'Thu Ngân'
+                        WHEN w.StaffID IS NOT NULL THEN 'Phục Vụ'
+                        ELSE 'Nhân Viên'
+                    END as RoleName,
+                    CASE
+                        WHEN c.StaffID IS NOT NULL THEN CAST(IFNULL(c.Experience, 0) AS CHAR)
+                        WHEN ca.StaffID IS NOT NULL THEN IFNULL(ca.Education, '')
+                        WHEN w.StaffID IS NOT NULL THEN IFNULL(w.Fluency, '')
+                        ELSE ''
+                    END as DetailInfo
+                FROM staff s
+                LEFT JOIN chef c ON s.StaffID = c.StaffID
+                LEFT JOIN cashier ca ON s.StaffID = ca.StaffID
+                LEFT JOIN waiter w ON s.StaffID = w.StaffID
+            """
+        
+        # Execute raw query
+        with connection.cursor() as cursor:
+            cursor.execute(sql)
+            columns = [col[0] for col in cursor.description]
+            results = [
+                dict(zip(columns, row))
+                for row in cursor.fetchall()
+            ]
+        
+        # Convert to serializer format
+        staff_data = []
+        for row in results:
+            staff_data.append({
+                'staffid': row.get('StaffID'),
+                'fullname': row.get('FullName'),
+                'phone': row.get('Phone'),
+                'status': row.get('Status'),
+                'smanagerid': row.get('SManagerID'),
+                'role': row.get('RoleName'),
+                'detail': row.get('DetailInfo')
+            })
+        
+        return Response(staff_data)
+    
+    @action(detail=False, methods=['post'])
+    def add_staff(self, request):
+        """
+        POST /api/staff/add_staff/
+        Thêm nhân viên mới bằng stored procedure sp_AddStaff
+        
+        Body: {
+            "name": "Nguyễn Văn A",
+            "phone": "0901234567",
+            "manager_id": "MGR01",
+            "role": "Chef",  // Chef, Cashier, hoặc Waiter
+            "role_detail": "5"  // Experience (năm) cho Chef, Education cho Cashier, Fluency cho Waiter
+        }
+        """
+        data = request.data
+        
+        try:
+            with connection.cursor() as cursor:
+                # Gọi stored procedure sp_AddStaff
+                # INOUT parameter cho StaffID
+                cursor.execute("""
+                    SET @staff_id = NULL;
+                """)
+                
+                cursor.execute("""
+                    CALL sp_AddStaff(
+                        @staff_id,
+                        %s, %s, %s, %s, %s
+                    )
+                """, [
+                    data.get('name'),
+                    data.get('phone'),
+                    data.get('manager_id', 'MGR01'),  # Mặc định MGR01
+                    data.get('role'),
+                    data.get('role_detail', '')
+                ])
+                
+                # Lấy StaffID vừa tạo
+                cursor.execute("SELECT @staff_id")
+                staff_id = cursor.fetchone()[0]
+            
+            return Response({
+                'message': 'Thêm nhân viên thành công!',
+                'staff_id': staff_id,
+                'name': data.get('name'),
+                'role': data.get('role')
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Lỗi khi thêm nhân viên: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['put', 'patch'])
+    def update_staff(self, request, pk=None):
+        """
+        PUT /api/staff/{id}/update_staff/
+        Cập nhật thông tin nhân viên bằng stored procedure sp_UpdateStaff
+        
+        Body: {
+            "name": "Nguyễn Văn A",
+            "phone": "0901234567",
+            "status": "Working",  // Working, Retired, On Leave
+            "role_detail": "10"  // Experience cho Chef, Education cho Cashier, Fluency cho Waiter
+        }
+        """
+        staff = self.get_object()
+        data = request.data
+        
+        try:
+            with connection.cursor() as cursor:
+                # Gọi stored procedure sp_UpdateStaff
+                cursor.execute("""
+                    CALL sp_UpdateStaff(
+                        %s, %s, %s, %s, %s
+                    )
+                """, [
+                    staff.staffid,
+                    data.get('name', staff.fullname),
+                    data.get('phone', staff.phone),
+                    data.get('status', staff.status),
+                    data.get('role_detail', '')
+                ])
+            
+            return Response({
+                'message': 'Cập nhật nhân viên thành công!',
+                'staff_id': staff.staffid,
+                'name': data.get('name', staff.fullname)
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Lỗi khi cập nhật nhân viên: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        DELETE /api/staff/{id}/
+        Xóa nhân viên (kiểm tra ràng buộc trước)
+        """
+        staff = self.get_object()
+        staff_id = staff.staffid
+        
+        try:
+            # Kiểm tra ràng buộc với các bảng khác
+            from django.db import connection
+            
+            with connection.cursor() as cursor:
+                # Kiểm tra PTOrder
+                cursor.execute("SELECT COUNT(*) FROM PTOrder WHERE PTStaffID = %s", [staff_id])
+                if cursor.fetchone()[0] > 0:
+                    return Response({
+                        'error': 'Không thể xóa nhân viên đã tham gia xử lý đơn hàng!'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Kiểm tra Detail (Chef)
+                cursor.execute("SELECT COUNT(*) FROM Detail WHERE DStaffID = %s", [staff_id])
+                if cursor.fetchone()[0] > 0:
+                    return Response({
+                        'error': 'Không thể xóa đầu bếp đã tham gia chế biến món ăn!'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Kiểm tra Invoice (Cashier)
+                cursor.execute("SELECT COUNT(*) FROM Invoice WHERE IStaffID = %s", [staff_id])
+                if cursor.fetchone()[0] > 0:
+                    return Response({
+                        'error': 'Không thể xóa thu ngân đã tạo hóa đơn!'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Kiểm tra Payment (Cashier)
+                cursor.execute("SELECT COUNT(*) FROM Payment WHERE PStaffID = %s", [staff_id])
+                if cursor.fetchone()[0] > 0:
+                    return Response({
+                        'error': 'Không thể xóa thu ngân đã xử lý thanh toán!'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Nếu không có ràng buộc, xóa an toàn
+            # Xóa từ Supervision trước
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM Supervision WHERE minor_StaffID = %s OR major_StaffID = %s", [staff_id, staff_id])
+            
+            # Xóa từ bảng con (Chef/Cashier/Waiter)
+            Chef.objects.filter(staffid=staff_id).delete()
+            Cashier.objects.filter(staffid=staff_id).delete()
+            Waiter.objects.filter(staffid=staff_id).delete()
+            
+            # Xóa từ Staff
+            staff.delete()
+            
+            return Response({
+                'message': f'Đã xóa nhân viên {staff_id}'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            print(f"Error deleting staff: {str(e)}")
+            print(traceback.format_exc())
+            
+            return Response({
+                'error': f'Lỗi khi xóa nhân viên: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ChefViewSet(viewsets.ModelViewSet):
@@ -242,10 +526,85 @@ class WaiterViewSet(viewsets.ModelViewSet):
 class MaterialViewSet(viewsets.ModelViewSet):
     """
     API ViewSet cho Material (Nguyên liệu)
+    Hỗ trợ sắp xếp bằng Raw SQL Query:
+    - GET /api/materials/?sort_by=materialid&order=asc
+    - GET /api/materials/?sort_by=quantity&order=desc
     """
     queryset = Material.objects.all()
     serializer_class = MaterialSerializer
     permission_classes = [AllowAny] # Should be IsManager in prod
+    
+    def list(self, request, *args, **kwargs):
+        """
+        Override list method để sử dụng Raw SQL Query cho sorting
+        JOIN với QDMaterial và Item để hiển thị món ăn tương ứng
+        """
+        sort_by = request.query_params.get('sort_by', None)
+        order = request.query_params.get('order', 'asc')
+        
+        # Validate sort_by parameter
+        valid_sort_fields = ['materialid', 'quantity']
+        if sort_by and sort_by not in valid_sort_fields:
+            return Response(
+                {'error': f'Invalid sort_by. Must be one of: {valid_sort_fields}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate order parameter
+        if order.lower() not in ['asc', 'desc']:
+            return Response(
+                {'error': 'Invalid order. Must be asc or desc'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Build raw SQL query with JOIN
+        # JOIN 3 bảng: Material, QDMaterial, Item
+        base_sql = """
+            SELECT 
+                m.MaterialID,
+                m.name AS material_name,
+                m.Quantity,
+                GROUP_CONCAT(DISTINCT i.ItemID ORDER BY i.ItemID SEPARATOR ', ') AS item_ids,
+                GROUP_CONCAT(DISTINCT i.Name ORDER BY i.ItemID SEPARATOR ', ') AS item_names
+            FROM material m
+            LEFT JOIN qdmaterial q ON m.MaterialID = q.QDMaterialID
+            LEFT JOIN item i ON q.QDItemID = i.ItemID
+            GROUP BY m.MaterialID, m.name, m.Quantity
+        """
+        
+        if sort_by:
+            # Thêm ORDER BY
+            order_field = 'm.MaterialID' if sort_by == 'materialid' else 'm.Quantity'
+            sql = base_sql + f" ORDER BY {order_field} {order.upper()}"
+        else:
+            sql = base_sql
+        
+        # Execute raw query
+        with connection.cursor() as cursor:
+            cursor.execute(sql)
+            columns = [col[0] for col in cursor.description]
+            results = [
+                dict(zip(columns, row))
+                for row in cursor.fetchall()
+            ]
+        
+        # Convert to serializer format
+        materials_data = []
+        for row in results:
+            materials_data.append({
+                'materialid': row.get('MaterialID'),
+                'name': row.get('material_name'),
+                'quantity': row.get('Quantity'),
+                'item_ids': row.get('item_ids') or '--',
+                'item_names': row.get('item_names') or '--'
+            })
+        
+        # Paginate if needed
+        page = self.paginate_queryset(materials_data)
+        if page is not None:
+            return self.get_paginated_response(page)
+        
+        return Response(materials_data)
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """

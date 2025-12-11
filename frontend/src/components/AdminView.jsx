@@ -79,9 +79,9 @@ function AdminView() {
 
   return (
     <div className="admin-view">
-      <h1 style={{ marginTop: 0, marginBottom: '1rem' }}>👨‍💼 Quản Lý Nhà Hàng</h1>
+      <h1 style={{ marginTop: 0, marginBottom: '1rem' }}>Quản Lý Nhà Hàng</h1>
       
-      {error && <div className="error">❌ {error}</div>}
+      {error && <div className="error">{error}</div>}
 
       {/* KPI Dashboard */}
       <div className="kpi-dashboard">
@@ -266,7 +266,7 @@ function AdminView() {
                         <span
                           className={`status status-${order.status.toLowerCase()}`}
                         >
-                          {order.status === 'Serving' ? '🔄 Đang phục vụ' : '✅ Đã thanh toán'}
+                          {order.status === 'Serving' ? 'Đang phục vụ' : 'Đã thanh toán'}
                         </span>
                       </td>
                       <td>{order.quantity}</td>

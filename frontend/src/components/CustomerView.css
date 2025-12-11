@@ -581,9 +581,29 @@
   margin-bottom: 1.5rem;
 }
 
-.modal-item-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
+.modal-item-image {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 1rem;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-item-icon-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .modal-item-info h4 {

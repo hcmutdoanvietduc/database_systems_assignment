@@ -5,6 +5,7 @@ import CustomerView from './components/CustomerView';
 import StaffView from './components/StaffView';
 import AdminView from './components/AdminView';
 import MaterialManagement from './components/MaterialManagement';
+import StaffManagement from './components/StaffManagement';
 import { logout } from './api';
 
 function App() {
@@ -51,16 +52,17 @@ function App() {
     switch (userRole) {
       case 'Manager':
         return [
-          { id: 'admin', icon: '📊', label: 'Tổng Quan' },
-          { id: 'materials', icon: '📦', label: 'Nguyên Liệu' }
+          { id: 'admin', label: 'Tổng Quan' },
+          { id: 'materials', label: 'Nguyên Liệu' },
+          { id: 'staff-management', label: 'Quản Lý NV' }
         ];
       case 'Staff':
         return [
-          { id: 'staff', icon: '📋', label: 'Quản Lý Đơn Hàng' }
+          { id: 'staff', label: 'Quản Lý Đơn Hàng' }
         ];
       case 'Customer':
         return [
-          { id: 'customer', icon: '🍽️', label: 'Đặt Món' }
+          { id: 'customer', label: 'Đặt Món' }
         ];
       default:
         return [];
@@ -82,7 +84,7 @@ function App() {
     <div className="App">
       {/* Sidebar */}
       <div className="sidebar">
-        <h2>🍽️ NHÀ HÀNG VIỆT</h2>
+        <h2>NHÀ HÀNG VIỆT</h2>
         
         {menuItems.map((item) => (
           <div
@@ -90,7 +92,7 @@ function App() {
             className={`menu-item ${currentView === item.id ? 'active' : ''}`}
             onClick={() => setCurrentView(item.id)}
           >
-            {item.icon} {item.label}
+            {item.label}
           </div>
         ))}
         
@@ -111,6 +113,7 @@ function App() {
         <div className="section active">
           {userRole === 'Manager' && currentView === 'admin' && <AdminView />}
           {userRole === 'Manager' && currentView === 'materials' && <MaterialManagement />}
+          {userRole === 'Manager' && currentView === 'staff-management' && <StaffManagement />}
           {userRole === 'Staff' && <StaffView />}
           {userRole === 'Customer' && <CustomerView />}
         </div>

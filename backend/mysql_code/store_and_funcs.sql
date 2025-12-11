@@ -47,6 +47,32 @@ END$$
 
 DELIMITER ;
 
+DROP FUNCTION IF EXISTS fn_GenerateInvoiceID;
+DELIMITER $$
+
+CREATE FUNCTION fn_GenerateInvoiceID()
+RETURNS VARCHAR(10)
+DETERMINISTIC
+BEGIN
+    DECLARE v_max_num INT DEFAULT 0;
+    DECLARE v_new_id VARCHAR(10);
+    
+    -- Lấy số lớn nhất từ InvoiceID có format INVxxx
+    SELECT IFNULL(MAX(CAST(SUBSTRING(InvoiceID, 4) AS UNSIGNED)), 0)
+    INTO v_max_num
+    FROM Invoice
+    WHERE InvoiceID LIKE 'INV%' 
+      AND LENGTH(InvoiceID) <= 10
+      AND SUBSTRING(InvoiceID, 4) REGEXP '^[0-9]+$';
+    
+    -- Tăng lên 1 và format INV + pad 0
+    SET v_new_id = CONCAT('INV', LPAD(v_max_num + 1, 4, '0'));
+    
+    RETURN v_new_id;
+END$$
+
+DELIMITER ;
+
 DROP FUNCTION IF EXISTS fn_CustomerTotalSpent;
 DELIMITER $$
 
@@ -271,8 +297,239 @@ END$$
 
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS sp_DeleteOrder;
+DELIMITER $$
 
+CREATE PROCEDURE sp_DeleteOrder(
+    IN pOrderID VARCHAR(10)
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Lỗi khi xóa đơn hàng!';
+    END;
 
+    START TRANSACTION;
 
+    -- Xóa YPromo (liên kết Invoice-Order-Promo) nếu có
+    DELETE FROM YPromo 
+    WHERE YOrderID = pOrderID;
 
+    -- Xóa Invoice liên quan
+    DELETE FROM Invoice 
+    WHERE InvoiceID IN (
+        SELECT YInvoiceID FROM YPromo WHERE YOrderID = pOrderID
+    );
 
+    -- Xóa Detail (chi tiết món ăn trong đơn)
+    DELETE FROM Detail 
+    WHERE DOrderID = pOrderID;
+
+    -- Xóa đơn hàng
+    DELETE FROM ROrder 
+    WHERE OrderID = pOrderID;
+
+    COMMIT;
+
+END$$
+
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_AddStaff;
+DELIMITER $$
+
+CREATE PROCEDURE sp_AddStaff(
+    INOUT pStaffID VARCHAR(10),
+    IN pName VARCHAR(100),
+    IN pPhone VARCHAR(15),
+    IN pManagerID VARCHAR(10),
+    IN pRole VARCHAR(20),
+    IN pRoleDetail VARCHAR(255)
+)
+BEGIN
+    DECLARE v_max_num INT DEFAULT 0;
+    DECLARE v_experience INT DEFAULT 0;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Lỗi khi thêm nhân viên!';
+    END;
+
+    START TRANSACTION;
+
+    -- Tự sinh StaffID nếu không có
+    IF pStaffID IS NULL OR pStaffID = '' THEN
+        SELECT IFNULL(MAX(CAST(SUBSTRING(StaffID, 3) AS UNSIGNED)), 0)
+        INTO v_max_num
+        FROM Staff
+        WHERE StaffID LIKE 'ST%';
+        
+        SET pStaffID = CONCAT('ST', LPAD(v_max_num + 1, 2, '0'));
+    END IF;
+
+    -- Thêm vào bảng Staff (FullName, Phone, Status, SManagerID)
+    INSERT INTO Staff (StaffID, FullName, Phone, Status, SManagerID)
+    VALUES (pStaffID, pName, pPhone, 'Working', pManagerID);
+
+    -- Thêm vào bảng chuyên môn tương ứng
+    CASE pRole
+        WHEN 'Chef' THEN
+            -- Chuyển đổi pRoleDetail thành INT cho Experience
+            SET v_experience = CAST(IFNULL(pRoleDetail, '0') AS UNSIGNED);
+            INSERT INTO Chef (StaffID, Experience)
+            VALUES (pStaffID, v_experience);
+            
+        WHEN 'Cashier' THEN
+            INSERT INTO Cashier (StaffID, Education)
+            VALUES (pStaffID, pRoleDetail);
+            
+        WHEN 'Waiter' THEN
+            INSERT INTO Waiter (StaffID, Fluency)
+            VALUES (pStaffID, pRoleDetail);
+            
+        ELSE
+            SIGNAL SQLSTATE '45000' 
+            SET MESSAGE_TEXT = 'Vai trò không hợp lệ! Chỉ chấp nhận: Chef, Cashier, Waiter';
+    END CASE;
+
+    COMMIT;
+
+END$$
+
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_UpdateStaff;
+DELIMITER $$
+
+CREATE PROCEDURE sp_UpdateStaff(
+    IN pStaffID VARCHAR(10),
+    IN pName VARCHAR(100),
+    IN pPhone VARCHAR(15),
+    IN pStatus VARCHAR(20),
+    IN pRoleDetail VARCHAR(255)
+)
+BEGIN
+    DECLARE v_experience INT DEFAULT 0;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Lỗi khi cập nhật nhân viên!';
+    END;
+
+    START TRANSACTION;
+
+    -- Cập nhật bảng Staff (FullName, Phone, Status)
+    UPDATE Staff 
+    SET FullName = pName,
+        Phone = pPhone,
+        Status = pStatus
+    WHERE StaffID = pStaffID;
+
+    -- Xác định vai trò và cập nhật chi tiết
+    IF EXISTS (SELECT 1 FROM Chef WHERE StaffID = pStaffID) THEN
+        -- Cập nhật Experience cho Chef
+        SET v_experience = CAST(IFNULL(pRoleDetail, '0') AS UNSIGNED);
+        UPDATE Chef 
+        SET Experience = v_experience
+        WHERE StaffID = pStaffID;
+        
+    ELSEIF EXISTS (SELECT 1 FROM Cashier WHERE StaffID = pStaffID) THEN
+        -- Cập nhật Education cho Cashier
+        UPDATE Cashier 
+        SET Education = pRoleDetail
+        WHERE StaffID = pStaffID;
+        
+    ELSEIF EXISTS (SELECT 1 FROM Waiter WHERE StaffID = pStaffID) THEN
+        -- Cập nhật Fluency cho Waiter
+        UPDATE Waiter 
+        SET Fluency = pRoleDetail
+        WHERE StaffID = pStaffID;
+    END IF;
+
+    COMMIT;
+
+END$$
+
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_DeleteStaff;
+DELIMITER $$
+
+CREATE PROCEDURE sp_DeleteStaff(
+    IN pStaffID VARCHAR(10)
+)
+BEGIN
+    DECLARE v_count INT DEFAULT 0;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Lỗi khi xóa nhân viên!';
+    END;
+
+    START TRANSACTION;
+
+    -- Kiểm tra xem nhân viên có liên quan đến đơn hàng không
+    SELECT COUNT(*) INTO v_count
+    FROM PTOrder
+    WHERE PTStaffID = pStaffID;
+    
+    IF v_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Không thể xóa nhân viên đã tham gia xử lý đơn hàng!';
+    END IF;
+    
+    -- Kiểm tra xem nhân viên có liên quan đến Detail không (Chef)
+    SELECT COUNT(*) INTO v_count
+    FROM Detail
+    WHERE DStaffID = pStaffID;
+    
+    IF v_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Không thể xóa đầu bếp đã tham gia chế biến món ăn!';
+    END IF;
+    
+    -- Kiểm tra xem nhân viên có liên quan đến Invoice không (Cashier)
+    SELECT COUNT(*) INTO v_count
+    FROM Invoice
+    WHERE IStaffID = pStaffID;
+    
+    IF v_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Không thể xóa thu ngân đã tạo hóa đơn!';
+    END IF;
+    
+    -- Kiểm tra xem nhân viên có liên quan đến Payment không (Cashier)
+    SELECT COUNT(*) INTO v_count
+    FROM Payment
+    WHERE PStaffID = pStaffID;
+    
+    IF v_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Không thể xóa thu ngân đã xử lý thanh toán!';
+    END IF;
+
+    -- Xóa từ bảng Supervision (nếu là cấp trên hoặc cấp dưới)
+    DELETE FROM Supervision 
+    WHERE minor_StaffID = pStaffID OR major_StaffID = pStaffID;
+
+    -- Xóa từ bảng con tương ứng
+    DELETE FROM Chef WHERE StaffID = pStaffID;
+    DELETE FROM Cashier WHERE StaffID = pStaffID;
+    DELETE FROM Waiter WHERE StaffID = pStaffID;
+
+    -- Xóa từ bảng Staff
+    DELETE FROM Staff WHERE StaffID = pStaffID;
+
+    COMMIT;
+
+END$$
+
+DELIMITER ;

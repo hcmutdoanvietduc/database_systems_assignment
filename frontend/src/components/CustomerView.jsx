@@ -114,7 +114,7 @@ function CustomerView() {
 
   return (
     <div className="customer-view">
-      <h1 style={{ marginTop: 0, marginBottom: '2rem' }}>🍽️ Đặt Món</h1>
+      <h1 style={{ marginTop: 0, marginBottom: '2rem' }}>Đặt Món</h1>
 
       {error && <div className="error">❌ {error}</div>}
       {success && <div className="success">✅ {success}</div>}
@@ -124,11 +124,25 @@ function CustomerView() {
         <div className="modal-overlay" onClick={cancelAddItem}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>🍽️ Xác Nhận Gọi Món</h3>
+              <h3>Xác Nhận Gọi Món</h3>
             </div>
             <div className="modal-body">
               <div className="modal-item-info">
-                <div className="modal-item-icon">🍽️</div>
+                <div className="modal-item-image">
+                  {confirmModal.item.imageurl ? (
+                    <img 
+                      src={confirmModal.item.imageurl} 
+                      alt={confirmModal.item.name}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : (
+                    <div className="modal-item-icon-fallback">MÓN ĂN</div>
+                  )}
+                  <div className="modal-item-icon-fallback" style={{ display: 'none' }}>MÓN ĂN</div>
+                </div>
                 <h4>{confirmModal.item.name}</h4>
                 <p className="modal-item-price">₫ {Math.round(confirmModal.item.price).toLocaleString('vi-VN')}</p>
               </div>

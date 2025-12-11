@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getTables, completeOrder, updateTable } from '../api';
+import { getTables, completeOrder, updateTable, deleteOrder } from '../api';
 import './StaffView.css';
 
 function StaffView() {
@@ -44,7 +44,23 @@ function StaffView() {
     }
   };
 
-  if (loading) return <div className="loading">⏳ Đang tải...</div>;
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa đơn hàng này? Hóa đơn liên quan cũng sẽ bị xóa!')) {
+      return;
+    }
+
+    try {
+      await deleteOrder(orderId);
+      setSuccess('Đã xóa đơn hàng và hóa đơn!');
+      await loadTables();
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (err) {
+      setError('Lỗi khi xóa đơn hàng!');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  if (loading) return <div className="loading">Đang tải...</div>;
 
   const occupiedTables = tables.filter((t) => t.status === 'Occupied' || t.status === 'Reserved');
   const availableTables = tables.filter((t) => t.status === 'Available');
@@ -60,7 +76,7 @@ function StaffView() {
 
   return (
     <div className="staff-view">
-      <h1 style={{ marginTop: 0, marginBottom: '2rem' }}>👨‍💼 Quản Lý Đơn Hàng</h1>
+      <h1 style={{ marginTop: 0, marginBottom: '2rem' }}>Quản Lý Đơn Hàng</h1>
 
       {error && <div className="error">❌ {error}</div>}
       {success && <div className="success">✅ {success}</div>}
@@ -136,7 +152,7 @@ function StaffView() {
 
         {occupiedTables.filter(t => t.current_order).length === 0 ? (
           <div className="no-data">
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✨</div>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem', fontWeight: 'bold' }}>Không có đơn hàng</div>
             <p>Không có đơn hàng nào đang phục vụ!</p>
             <small>Hệ thống sẽ tự động cập nhật khi có đơn mới</small>
           </div>

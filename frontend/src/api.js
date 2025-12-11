@@ -124,6 +124,10 @@ export const completeOrder = (orderId) => {
   return api.post(`/orders/${orderId}/complete/`);
 };
 
+export const deleteOrder = (orderId) => {
+  return api.delete(`/orders/${orderId}/delete_order/`);
+};
+
 // ==================== CUSTOMERS ====================
 export const getCustomers = () => {
   return api.get('/customers/');
@@ -148,8 +152,24 @@ export const getPromotions = () => {
 };
 
 // ==================== STAFF ====================
-export const getStaff = () => {
-  return api.get('/staff/');
+export const getStaff = (role) => {
+  let url = '/staff/';
+  if (role) {
+    url += `?role=${role}`;
+  }
+  return api.get(url);
+};
+
+export const addStaff = (data) => {
+  return api.post('/staff/add_staff/', data);
+};
+
+export const updateStaff = (staffId, data) => {
+  return api.put(`/staff/${staffId}/update_staff/`, data);
+};
+
+export const deleteStaff = (staffId) => {
+  return api.delete(`/staff/${staffId}/`);
 };
 
 // ==================== CHEFS ====================
@@ -159,8 +179,12 @@ export const getChefs = () => {
 
 export default api;
 // ==================== MATERIALS ====================
-export const getMaterials = () => {
-  return api.get('/materials/');
+export const getMaterials = (sortBy, order) => {
+  let url = '/materials/';
+  if (sortBy) {
+    url += `?sort_by=${sortBy}&order=${order || 'asc'}`;
+  }
+  return api.get(url);
 };
 
 export const createMaterial = (data) => {

@@ -6,17 +6,19 @@ function MaterialManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ materialid: '', name: '', quantity: '' });
+  const [formData, setFormData] = useState({ materialid: '', name: '', quantity: '', item_ids: '', item_names: '' });
   const [sortBy, setSortBy] = useState('id'); 
   const [sortOrder, setSortOrder] = useState('asc'); 
 
   useEffect(() => {
     fetchMaterials();
-  }, []);
+  }, [sortBy, sortOrder]);
 
   const fetchMaterials = async () => {
     try {
-      const res = await getMaterials();
+      // Gửi sort parameters tới backend (Raw SQL Query)
+      const sortByParam = sortBy === 'id' ? 'materialid' : sortBy;
+      const res = await getMaterials(sortByParam, sortOrder);
       // Handle pagination response (res.data.results) or flat list (res.data)
       const data = res.data.results || res.data;
       setMaterials(Array.isArray(data) ? data : []);
@@ -35,7 +37,7 @@ function MaterialManagement() {
       } else {
         await createMaterial(formData);
       }
-      setFormData({ materialid: '', name: '', quantity: '' });
+      setFormData({ materialid: '', name: '', quantity: '', item_ids: '', item_names: '' });
       setEditingId(null);
       setError('');
       fetchMaterials();
@@ -53,7 +55,13 @@ function MaterialManagement() {
 
   const handleEdit = (material) => {
     setEditingId(material.materialid);
-    setFormData({ materialid: material.materialid, name: material.name, quantity: material.quantity });
+    setFormData({ 
+      materialid: material.materialid, 
+      name: material.name, 
+      quantity: material.quantity,
+      item_ids: material.item_ids || '',
+      item_names: material.item_names || ''
+    });
   };
 
   const handleDelete = async (id) => {
@@ -67,24 +75,7 @@ function MaterialManagement() {
     }
   };
 
-  // Hàm sắp xếp nguyên liệu
-  const getSortedMaterials = () => {
-    const sorted = [...materials].sort((a, b) => {
-      if (sortBy === 'id') {
-        // Sắp xếp theo ID (string)
-        return sortOrder === 'asc' 
-          ? a.materialid.localeCompare(b.materialid)
-          : b.materialid.localeCompare(a.materialid);
-      } else if (sortBy === 'quantity') {
-        // Sắp xếp theo số lượng (number)
-        return sortOrder === 'asc' 
-          ? a.quantity - b.quantity
-          : b.quantity - a.quantity;
-      }
-      return 0;
-    });
-    return sorted;
-  };
+  // Xóa hàm getSortedMaterials - Backend xử lý sorting bằng Raw SQL Query
 
   // Hàm thay đổi tiêu chí sắp xếp
   const handleSortChange = (newSortBy) => {
@@ -102,7 +93,7 @@ function MaterialManagement() {
 
   return (
     <div className="material-management">
-      <h2>📦 Quản Lý Nguyên Liệu</h2>
+      <h2>Quản Lý Nguyên Liệu</h2>
       {error && (
         <div className="error">
           {error}
@@ -137,7 +128,7 @@ function MaterialManagement() {
         />
         <button type="submit">{editingId ? 'Cập nhật' : 'Thêm mới'}</button>
         {editingId && (
-          <button type="button" onClick={() => { setEditingId(null); setFormData({ materialid: '', name: '', quantity: '' }); }}>
+          <button type="button" onClick={() => { setEditingId(null); setFormData({ materialid: '', name: '', quantity: '', item_ids: '', item_names: '' }); }}>
             Hủy
           </button>
         )}
@@ -145,7 +136,7 @@ function MaterialManagement() {
 
       {/* Bộ lọc sắp xếp */}
       <div className="sort-controls">
-        <span style={{ marginRight: '10px', fontWeight: 'bold' }}>🔍 Sắp xếp theo:</span>
+        <span style={{ marginRight: '10px', fontWeight: 'bold' }}>Sắp xếp theo:</span>
         <button 
           className={`sort-btn ${sortBy === 'id' ? 'active' : ''}`}
           onClick={() => handleSortChange('id')}
@@ -166,15 +157,19 @@ function MaterialManagement() {
             <th>Mã NL</th>
             <th>Tên Nguyên Liệu</th>
             <th>Số Lượng</th>
+            <th>ID Món Ăn</th>
+            <th>Tên Món Ăn</th>
             <th>Hành Động</th>
           </tr>
         </thead>
         <tbody>
-          {getSortedMaterials().map((m) => (
+          {materials.map((m) => (
             <tr key={m.materialid}>
               <td>{m.materialid}</td>
               <td>{m.name}</td>
               <td>{m.quantity}</td>
+              <td>{m.item_ids || '--'}</td>
+              <td>{m.item_names || '--'}</td>
               <td>
                 <button onClick={() => handleEdit(m)}>Sửa</button>
                 <button onClick={() => handleDelete(m.materialid)} className="btn-delete">Xóa</button>
